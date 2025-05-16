@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 编辑器</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- 不再需要在主页面加载GitHub CSS -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/github-markdown-light.min.css"> -->
+</head>
+<body>
+    <div class="container">
+        <div class="control-panel">
+            <button id="preview-new-tab-btn" class="control-btn">预览</button>
+            <button id="download-markdown-btn" class="control-btn">下载</button>
+        </div>
+        <div class="editor-container single-pane">
+            <div class="editor-wrapper full-width">
+                <div class="editor-content">
+                    <textarea id="markdown-input" placeholder="在这里输入 Markdown 内容..."></textarea>
+                </div>
+            </div>
+            <!-- 预览容器已移除 -->
+            <!-- <div class="preview-wrapper">
+                ...
+            </div> -->
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 

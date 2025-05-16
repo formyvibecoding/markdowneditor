@@ -1,0 +1,142 @@
+html, body {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+h1 {
+    text-align: center;
+    margin: 10px 0;
+    color: #2c3e50;
+}
+
+.control-panel {
+    display: flex;
+    justify-content: center;
+    padding: 0 10px 20px;
+    width: 100%;
+    max-width: 800px;
+    gap: 15px;
+}
+
+.control-btn {
+    background-color: transparent;
+    color: #5c3e2e;
+    border: none;
+    /* border-radius: 6px; */
+    /* padding: 8px 16px; */
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    /* box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.control-btn:hover {
+    /* background-color: #efe7d4; */
+    /* border-color: #6e5646; */
+    transform: translateY(-2px);
+}
+
+.control-btn:active {
+    transform: translateY(1px);
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.editor-container.single-pane {
+    display: flex;
+    overflow: hidden;
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 1 / 1;
+    max-height: 80vh;
+    margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.editor-wrapper.full-width {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.editor-header {
+    display: flex;
+    background-color: #f1f1f1;
+    border-bottom: 1px solid #ddd;
+}
+
+.editor-title {
+    padding: 12px 20px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.editor-content {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+}
+
+#markdown-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 40px;
+    overflow-y: auto;
+    border: none;
+    resize: none;
+    font-family: "Courier New", monospace;
+    font-size: 16px;
+    line-height: 1.6;
+    outline: none;
+    background-color: #ffffff;
+}
+
+/* .preview-content (不再需要) */
+/* .markdown-body table th (不再需要，样式在预览模板中) */
+
+/* 媒体查询，在窄屏幕上改为垂直布局 */
+@media (max-width: 768px) {
+    .editor-container {
+        flex-direction: column;
+        aspect-ratio: auto;
+        height: 70vh;
+    }
+    
+    .editor-container.single-pane {
+        max-width: 95%;
+    }
+} 
