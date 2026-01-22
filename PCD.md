@@ -4,148 +4,239 @@
 
 这是一个简洁高效的Markdown编辑器，提供实时编辑和预览功能。编辑器采用极简设计，专注于提供流畅的写作体验。预览功能在新标签页中打开，支持高质量PDF导出（分页或单页模式）。同时提供快捷下载原始Markdown内容的功能。
 
-## 组件结构
+**当前版本**: 2.0.0
 
-项目由三个主要文件组成:
+## 技术架构
 
-1. **index.html**: 主页面结构，包含编辑器界面
-2. **styles.css**: 样式定义，负责编辑器的视觉效果和布局
-3. **script.js**: 功能实现，处理编辑器的行为和预览转换
+### 技术栈
 
-### 文件关系图
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Vite | 5.x | 构建工具、开发服务器 |
+| TypeScript | 5.x | 类型系统 |
+| ESLint | 9.x | 代码质量检查 |
+| Prettier | 3.x | 代码格式化 |
+| Vitest | 1.x | 单元测试 |
+| Playwright | 1.x | E2E 测试 |
+| DOMPurify | 3.x | HTML 消毒（XSS 防护） |
+| Marked | 12.x | Markdown 解析 |
+
+### 项目结构
 
 ```
-Markdown编辑器
-├── index.html (主页面)
-├── styles.css (样式)
-├── script.js (功能)
-└── PCD.md (项目文档)
+markdowneditor/
+├── src/                      # 源代码
+│   ├── config.ts            # 配置常量（A4 尺寸、颜色、CDN 地址等）
+│   ├── utils.ts             # 工具函数（防抖、平台检测、文件下载等）
+│   ├── sanitize.ts          # HTML 消毒（XSS 防护，保留安全样式）
+│   ├── pdf.ts               # PDF 生成逻辑
+│   ├── main.ts              # 应用主入口
+│   ├── styles.css           # 样式文件
+│   ├── vite-env.d.ts        # Vite 环境类型声明
+│   └── templates/
+│       └── preview.ts       # 预览页面模板
+├── tests/
+│   ├── unit/                # 单元测试
+│   │   ├── utils.test.ts
+│   │   └── sanitize.test.ts
+│   └── e2e/                 # E2E 测试
+│       └── editor.spec.ts
+├── index.html               # HTML 入口
+├── package.json             # 项目配置
+├── tsconfig.json            # TypeScript 配置
+├── vite.config.ts           # Vite 配置
+├── vitest.config.ts         # Vitest 配置
+├── playwright.config.ts     # Playwright 配置
+├── eslint.config.js         # ESLint 配置
+├── .prettierrc              # Prettier 配置
+├── .gitignore               # Git 忽略文件
+├── CHANGELOG.md             # 版本变更日志
+└── PCD.md                   # 项目文档（本文件）
 ```
 
-## 组件详解
+## 模块详解
 
-### 1. 编辑器组件 (index.html)
+### 1. 配置模块 (config.ts)
 
-主要结构包括：
-- 整体容器（.container）
-- 控制面板（.control-panel）
-- 编辑器容器（.editor-container）
-- 编辑区域（#markdown-input）
+集中管理所有配置常量：
 
-```html
-<div class="container">
-    <div class="control-panel">
-        <button id="preview-new-tab-btn" class="control-btn">预览</button>
-        <button id="download-markdown-btn" class="control-btn">下载</button>
-    </div>
-    <div class="editor-container single-pane">
-        <div class="editor-wrapper full-width">
-            <div class="editor-content">
-                <textarea id="markdown-input" placeholder="在这里输入 Markdown 内容..."></textarea>
-            </div>
-        </div>
-    </div>
-</div>
+- **VERSION**: 当前版本号
+- **A4**: A4 纸张尺寸常量（mm 和 px）
+- **PDF_CONFIG**: PDF 生成配置（边距、质量、文件名等）
+- **UI_TEXT**: UI 文案（按钮文字、错误提示等）
+- **STYLES**: 样式配置（颜色、字体等）
+- **CDN_RESOURCES**: CDN 地址（支持多源回退）
+- **MARKED_OPTIONS**: Marked.js 配置
+- **EXAMPLE_MARKDOWN**: 示例 Markdown 内容
+
+### 2. 工具模块 (utils.ts)
+
+通用工具函数：
+
+- **debounce**: 防抖函数，避免快速连续触发
+- **getPlatformInfo**: 平台检测（使用现代 API，回退传统方式）
+- **downloadFile**: 文件下载（修复内存泄漏）
+- **generateTimestampFilename**: 生成时间戳文件名
+- **loadScriptWithFallback**: CDN 加载（支持多源回退）
+- **safeExecute**: 安全执行异步函数
+- **requireElement**: 必须获取 DOM 元素
+
+### 3. 消毒模块 (sanitize.ts)
+
+使用 DOMPurify 防止 XSS 攻击，同时保留安全的 HTML 样式：
+
+**允许的标签**：
+- 文本格式：p, br, hr, span, div, pre, code, blockquote
+- 标题：h1-h6
+- 列表：ul, ol, li, dl, dt, dd
+- 表格：table, thead, tbody, tr, th, td
+- 文本修饰：strong, b, em, i, u, s, del, ins, mark
+- 链接媒体：a, img, figure
+
+**允许的 CSS 属性**：
+- 颜色：color, background-color
+- 文本：font-family, font-size, text-align
+- 边框：border, border-radius
+- 间距：margin, padding
+- 尺寸：width, height
+
+**安全处理**：
+- 外部链接自动添加 `target="_blank" rel="noopener noreferrer"`
+- 图片自动添加 `loading="lazy"`
+
+### 4. PDF 模块 (pdf.ts)
+
+处理分页和单页 PDF 的生成：
+
+- CDN 库懒加载，支持多源回退
+- 统一的按钮状态管理（消除重复代码）
+- 样式保存与恢复机制
+- 分页 PDF 自动添加页码
+
+### 5. 预览模板 (templates/preview.ts)
+
+将 HTML 模板从主逻辑中抽离：
+
+- CSS 样式模板
+- JavaScript 逻辑模板
+- 统一的按钮命名
+
+### 6. 主入口 (main.ts)
+
+应用初始化和主逻辑：
+
+- 全局错误边界
+- Marked.js 配置
+- 快捷键设置（带防抖）
+- 下载和预览功能绑定
+
+## 功能特性
+
+### 核心功能
+
+1. **Markdown 编辑**
+   - 等宽字体编辑区域
+   - 示例内容预填充
+   - 支持所有 GFM 语法
+
+2. **预览功能**
+   - 新标签页打开
+   - GitHub 风格样式
+   - HTML 消毒（防 XSS）
+
+3. **下载功能**
+   - Markdown 文件下载
+   - 时间戳命名
+   - 快捷键支持（Cmd/Ctrl + Enter）
+
+4. **PDF 导出**
+   - 分页模式（适合长文档）
+   - 单页模式（适合短文档）
+   - 自动页码
+   - 高质量渲染（2x 缩放）
+
+### 安全特性
+
+1. **XSS 防护**
+   - DOMPurify 消毒所有 HTML
+   - 白名单机制（只允许安全标签/属性）
+   - CSS 属性过滤
+
+2. **错误边界**
+   - 全局错误捕获
+   - Promise 拒绝捕获
+   - 用户友好的错误提示
+
+3. **CDN 回退**
+   - 每个库 3 个 CDN 源
+   - 自动失败切换
+
+## 开发指南
+
+### 安装依赖
+
+```bash
+npm install
 ```
 
-### 2. 样式组件 (styles.css)
+### 开发模式
 
-主要样式区域：
-- 全局样式：基础设置，包括字体、颜色等
-- 布局样式：编辑器位置和尺寸（居中正方形布局）
-- 控制元素样式：古典文字按钮设计，带有柔和文本阴影
-- 编辑器阴影效果：轻微的阴影提升视觉层次感
-- 响应式设计：适配不同屏幕尺寸
+```bash
+npm run dev
+```
 
-### 3. 功能组件 (script.js)
+### 构建生产版本
 
-主要功能模块：
-- Markdown转换：使用marked.js库将Markdown转为HTML
-- 预览功能：在新标签页打开预览
-- Markdown下载：将编辑内容保存为时间戳命名的.md文件
-- PDF导出：支持两种模式
-  - 分页PDF：适合长文档，自动分页
-  - 单页PDF：适合短文档，保持内容完整性
+```bash
+npm run build
+```
 
-## 技术栈
+### 代码检查
 
-- **前端框架**：原生HTML/CSS/JavaScript
-- **Markdown解析**：marked.js
-- **PDF生成**：
-  - html2pdf.js：用于分页PDF生成
-  - html2canvas：用于单页PDF渲染
-  - jsPDF：PDF文件创建
-- **文件处理**：Blob API和URL对象用于文件下载
+```bash
+npm run lint        # 检查
+npm run lint:fix    # 自动修复
+npm run format      # 格式化
+```
 
-## 设计特点
+### 运行测试
 
-1. **极简设计**：
-   - 无冗余UI元素
+```bash
+npm run test           # 单元测试
+npm run test:coverage  # 覆盖率报告
+npm run test:e2e       # E2E 测试
+```
+
+### 类型检查
+
+```bash
+npm run typecheck
+```
+
+## 设计原则
+
+1. **极简设计**
+   - 无冗余 UI 元素
    - 专注于内容创作
-   - 居中布局提供最佳写作体验
+   - 居中布局
 
-2. **古典风格**：
-   - 控制按钮采用传统设计语言
-   - 优雅的文字效果和轻柔阴影
-   - 注重细节的互动反馈
+2. **古典风格**
+   - 传统设计语言
+   - 优雅的文字效果
+   - 轻柔阴影
 
-3. **响应式布局**：
-   - 适应不同屏幕尺寸
-   - 在移动设备上优化显示
+3. **响应式布局**
+   - 适应不同屏幕
+   - 移动设备优化
 
-4. **视觉层次**：
-   - 柔和的阴影效果提升界面质感
-   - 按钮文字阴影增强可读性
-   - 编辑区优雅的浮动效果
+4. **安全第一**
+   - 默认消毒所有用户输入
+   - 允许安全的样式自定义
 
-## 使用说明
+## 版本历史
 
-1. 在编辑区域输入Markdown内容
-2. 点击"预览"在新标签页查看渲染效果
-3. 点击"下载"将当前Markdown内容保存为本地文件（文件名为当前时间戳）
-4. 在预览页面可下载PDF:
-   - "下载PDF(分页)"：生成多页PDF，适合长文档
-   - "下载为1页PDF"：生成单页PDF，适合短文档
-
-## PDF生成特性
-
-### 分页PDF特性
-- 智能分页：避免元素被切断
-- 页码显示：自动添加页码
-- A4尺寸：标准文档格式
-- 优化的中英文混排：修复字体间距问题
-
-### 单页PDF特性
-- 固定A4宽度：保证排版一致性
-- 高质量渲染：2倍缩放，清晰显示
-- 保持内容完整性：不分隔内容
-- 优化的字体渲染：解决中英文混排问题
-
-## 最近更新
-
-1. **添加了Markdown下载功能**：
-   - 一键保存当前编辑内容为本地.md文件
-   - 文件名采用时间戳格式（YYYYMMDDHHmmss.md）
-   - 使用Web API实现无服务器下载
-
-2. **优化了界面视觉效果**：
-   - 添加了优雅的阴影效果增强视觉层次
-   - 为按钮文字添加柔和阴影
-   - 编辑器容器添加轻微阴影效果
-
-3. **修复了PDF预览的文字排版问题**：
-   - 解决了中英文混排时的字间距异常
-   - 优化了字体族设置，提高跨平台一致性
-   - 添加了针对标题元素的特殊处理
-
-## 未来改进方向
-
-1. 添加更多Markdown格式化工具
-2. 实现内容自动保存功能
-3. 添加主题切换选项
-4. 支持图片上传和管理
-5. 添加导出更多格式的选项（如HTML、Word等）
+详见 [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
-*文档更新日期：2025-04-15*
+*文档更新日期：2026-01-23*
