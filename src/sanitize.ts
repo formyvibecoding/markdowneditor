@@ -3,7 +3,12 @@
  * 使用 DOMPurify 防止 XSS 攻击，同时允许安全的 HTML 样式
  */
 
-import DOMPurify, { type Config, type HookEvent } from 'dompurify';
+import DOMPurify, { type Config } from 'dompurify';
+
+type HookEvent = {
+  attrName: string;
+  attrValue: string | null;
+};
 
 // =============================================================================
 // DOMPurify 配置
