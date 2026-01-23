@@ -5,6 +5,15 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.0.1] - 2026-01-23
+
+### 修复
+
+- **GitHub Pages 部署问题**：修复从 v2.0.0 升级后页面无法正常显示的问题
+  - 问题原因：Vite 项目需要构建步骤，但 GitHub Pages 直接从源代码部署
+  - 添加 `base: '/markdowneditor/'` 配置到 vite.config.ts
+  - 新增 GitHub Actions 工作流（`.github/workflows/deploy.yml`）实现自动构建和部署
+
 ## [2.0.0] - 2026-01-23
 
 ### 重大变更

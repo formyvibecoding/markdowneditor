@@ -1,6 +1,6 @@
 {
   "name": "markdown-editor",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "简洁高效的 Markdown 编辑器，支持实时预览和 PDF 导出",
   "type": "module",
   "scripts": {
