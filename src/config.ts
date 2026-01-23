@@ -6,7 +6,7 @@
 // =============================================================================
 // 版本信息
 // =============================================================================
-export const VERSION = '2.0.1';
+export const VERSION = '2.1.0';
 
 // =============================================================================
 // A4 尺寸常量
@@ -52,6 +52,12 @@ export const UI_TEXT = {
     SINGLE_RENDERING: '正在渲染...',
     SINGLE_GENERATING: '正在生成 PDF...',
   },
+  /** 预览复制按钮文案 */
+  COPY_BUTTONS: {
+    COPY: '复制预览',
+    COPYING: '正在复制...',
+    COPIED: '已复制',
+  },
   /** 错误提示 */
   ERRORS: {
     EMPTY_CONTENT: '编辑器内容为空，无法下载。',
@@ -59,6 +65,7 @@ export const UI_TEXT = {
     PDF_GENERATION_FAILED: '生成 PDF 时出错',
     PDF_INIT_FAILED: '初始化 PDF 生成器出错',
     CORS_ERROR: '可能存在跨域图片加载问题，请检查浏览器控制台。',
+    COPY_FAILED: '复制失败，请检查浏览器权限后重试。',
   },
   /** 页码格式 */
   PAGE_NUMBER_FORMAT: (current: number, total: number): string =>
@@ -81,6 +88,8 @@ export const STYLES = {
     PDF_BUTTON_PAGED_HOVER: '#218838',
     PDF_BUTTON_SINGLE: '#007bff',
     PDF_BUTTON_SINGLE_HOVER: '#0056b3',
+    COPY_BUTTON: '#6f42c1',
+    COPY_BUTTON_HOVER: '#5a32a3',
   },
   /** 字体 */
   FONTS: {

@@ -57,6 +57,14 @@ body {
   background-color: ${STYLES.COLORS.PDF_BUTTON_SINGLE_HOVER};
 }
 
+#copy-preview-btn {
+  background-color: ${STYLES.COLORS.COPY_BUTTON};
+}
+
+#copy-preview-btn:hover:not(:disabled) {
+  background-color: ${STYLES.COLORS.COPY_BUTTON_HOVER};
+}
+
 .container {
   max-width: 100%;
   margin: 0 auto;
@@ -128,6 +136,7 @@ const previewScript = `
 const contentArea = document.getElementById('preview-content-area');
 const pagedBtn = document.getElementById('download-pdf-btn');
 const singleBtn = document.getElementById('download-single-page-pdf-btn');
+const copyBtn = document.getElementById('copy-preview-btn');
 
 // 配置常量
 const A4_WIDTH_MM = ${A4.WIDTH_MM};
@@ -142,6 +151,10 @@ const UI_TEXT = {
   SINGLE: '${UI_TEXT.PDF_BUTTONS.SINGLE}',
   SINGLE_RENDERING: '${UI_TEXT.PDF_BUTTONS.SINGLE_RENDERING}',
   SINGLE_GENERATING: '${UI_TEXT.PDF_BUTTONS.SINGLE_GENERATING}',
+  COPY: '${UI_TEXT.COPY_BUTTONS.COPY}',
+  COPYING: '${UI_TEXT.COPY_BUTTONS.COPYING}',
+  COPIED: '${UI_TEXT.COPY_BUTTONS.COPIED}',
+  COPY_FAILED: '${UI_TEXT.ERRORS.COPY_FAILED}',
 };
 
 // CDN 资源（带回退）
@@ -194,6 +207,60 @@ function enableButtons() {
   singleBtn.disabled = false;
   pagedBtn.textContent = UI_TEXT.PAGED;
   singleBtn.textContent = UI_TEXT.SINGLE;
+}
+
+function setCopyButtonState(text, disabled) {
+  if (!copyBtn) return;
+  copyBtn.textContent = text;
+  copyBtn.disabled = disabled;
+}
+
+function restoreSelection(selection, ranges) {
+  if (!selection) return;
+  selection.removeAllRanges();
+  ranges.forEach((range) => selection.addRange(range));
+}
+
+function copyPreviewContent() {
+  if (!copyBtn || !contentArea) return;
+  setCopyButtonState(UI_TEXT.COPYING, true);
+
+  const selection = window.getSelection();
+  if (!selection) {
+    alert(UI_TEXT.COPY_FAILED);
+    setCopyButtonState(UI_TEXT.COPY, false);
+    return;
+  }
+
+  const previousRanges = [];
+  for (let i = 0; i < selection.rangeCount; i += 1) {
+    previousRanges.push(selection.getRangeAt(i));
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(contentArea);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  let success = false;
+  try {
+    success = document.execCommand('copy');
+  } catch (err) {
+    success = false;
+  }
+
+  restoreSelection(selection, previousRanges);
+
+  if (!success) {
+    alert(UI_TEXT.COPY_FAILED);
+    setCopyButtonState(UI_TEXT.COPY, false);
+    return;
+  }
+
+  setCopyButtonState(UI_TEXT.COPIED, true);
+  setTimeout(() => {
+    setCopyButtonState(UI_TEXT.COPY, false);
+  }, 1500);
 }
 
 // 分页 PDF 生成
@@ -326,6 +393,10 @@ singleBtn.addEventListener('click', async () => {
   }
 });
 
+if (copyBtn) {
+  copyBtn.addEventListener('click', copyPreviewContent);
+}
+
 // 预加载库
 ensureLibs().catch(() => {});
 `;
@@ -353,6 +424,7 @@ export function generatePreviewHtml(htmlContent: string): string {
   <div class="preview-controls">
     <button id="download-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.PAGED}</button>
     <button id="download-single-page-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.SINGLE}</button>
+    <button id="copy-preview-btn" class="pdf-btn">${UI_TEXT.COPY_BUTTONS.COPY}</button>
   </div>
   <div class="container">
     <article class="markdown-body" id="preview-content-area">
