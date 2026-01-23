@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(git -C /Users/hanyuyang/Github Work/markdowneditor log --oneline --all)",
-      "Bash(wc -l *.html *.css *.js)"
+      "Bash(wc -l *.html *.css *.js)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(ping:*)"
     ]
   }
 }
