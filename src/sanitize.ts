@@ -3,7 +3,7 @@
  * 使用 DOMPurify 防止 XSS 攻击，同时允许安全的 HTML 样式
  */
 
-import DOMPurify from 'dompurify';
+import DOMPurify, { type Config, type HookEvent } from 'dompurify';
 
 // =============================================================================
 // DOMPurify 配置
@@ -185,7 +185,7 @@ const ALLOWED_CSS_PROPERTIES = [
 /**
  * DOMPurify 配置选项
  */
-const PURIFY_CONFIG: DOMPurify.Config = {
+const PURIFY_CONFIG: Config = {
   ALLOWED_TAGS,
   ALLOWED_ATTR,
   // 允许 data: 协议的图片（base64 图片）
@@ -198,27 +198,32 @@ const PURIFY_CONFIG: DOMPurify.Config = {
 /**
  * 自定义钩子：过滤危险的 CSS 属性
  */
-DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
-  if (data.attrName === 'style' && data.attrValue) {
-    // 解析并过滤 CSS 属性
-    const filteredStyles = data.attrValue
-      .split(';')
-      .map(rule => rule.trim())
-      .filter(rule => {
-        if (!rule) return false;
-        const [property] = rule.split(':').map(s => s.trim().toLowerCase());
-        return property && ALLOWED_CSS_PROPERTIES.includes(property);
-      })
-      .join('; ');
+DOMPurify.addHook(
+  'uponSanitizeAttribute',
+  (_node: Element, data: HookEvent) => {
+    if (data.attrName === 'style' && data.attrValue) {
+      // 解析并过滤 CSS 属性
+      const filteredStyles = data.attrValue
+        .split(';')
+        .map((rule: string) => rule.trim())
+        .filter((rule: string) => {
+          if (!rule) return false;
+          const [property] = rule
+            .split(':')
+            .map((s: string) => s.trim().toLowerCase());
+          return property && ALLOWED_CSS_PROPERTIES.includes(property);
+        })
+        .join('; ');
 
-    data.attrValue = filteredStyles;
+      data.attrValue = filteredStyles;
+    }
   }
-});
+);
 
 /**
  * 自定义钩子：确保外部链接安全
  */
-DOMPurify.addHook('afterSanitizeAttributes', node => {
+DOMPurify.addHook('afterSanitizeAttributes', (node: Element) => {
   // 为外部链接添加安全属性
   if (node.tagName === 'A') {
     const href = node.getAttribute('href');

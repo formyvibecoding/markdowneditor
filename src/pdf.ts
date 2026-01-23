@@ -324,10 +324,7 @@ export async function generatePagedPdf(
         .get('pdf')
         .then((pdf: JsPDF) => {
           addPageNumbers(pdf);
-          return pdf;
-        })
-        .save()
-        .then(() => {
+          pdf.save(PDF_CONFIG.PAGED_FILENAME);
           resolve();
         })
         .catch((err: Error) => {
