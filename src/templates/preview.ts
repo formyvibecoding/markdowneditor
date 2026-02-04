@@ -221,7 +221,50 @@ function restoreSelection(selection, ranges) {
   ranges.forEach((range) => selection.addRange(range));
 }
 
-function copyPreviewContent() {
+function syncCheckboxAttributes(container) {
+  const inputs = container.querySelectorAll('input[type="checkbox"]');
+  return Array.from(inputs).map((input) => {
+    const hadAttr = input.hasAttribute('checked');
+    if (input.checked) {
+      input.setAttribute('checked', '');
+    } else {
+      input.removeAttribute('checked');
+    }
+    return { input, hadAttr };
+  });
+}
+
+function restoreCheckboxAttributes(states) {
+  states.forEach(({ input, hadAttr }) => {
+    if (hadAttr) {
+      input.setAttribute('checked', '');
+    } else {
+      input.removeAttribute('checked');
+    }
+  });
+}
+
+function buildClipboardPayload(container) {
+  const clone = container.cloneNode(true);
+  const liveInputs = container.querySelectorAll('input[type="checkbox"]');
+  const cloneInputs = clone.querySelectorAll('input[type="checkbox"]');
+  liveInputs.forEach((input, index) => {
+    const cloneInput = cloneInputs[index];
+    if (!cloneInput) return;
+    if (input.checked) {
+      cloneInput.setAttribute('checked', '');
+    } else {
+      cloneInput.removeAttribute('checked');
+    }
+  });
+
+  return {
+    html: clone.innerHTML,
+    text: clone.innerText,
+  };
+}
+
+async function copyPreviewContent() {
   if (!copyBtn || !contentArea) return;
   setCopyButtonState(UI_TEXT.COPYING, true);
 
@@ -237,19 +280,32 @@ function copyPreviewContent() {
     previousRanges.push(selection.getRangeAt(i));
   }
 
-  const range = document.createRange();
-  range.selectNodeContents(contentArea);
-  selection.removeAllRanges();
-  selection.addRange(range);
+  const checkboxStates = syncCheckboxAttributes(contentArea);
+  const { html, text } = buildClipboardPayload(contentArea);
 
   let success = false;
   try {
-    success = document.execCommand('copy');
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
+      success = true;
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(contentArea);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      success = document.execCommand('copy');
+    }
   } catch (err) {
     success = false;
+  } finally {
+    restoreSelection(selection, previousRanges);
+    restoreCheckboxAttributes(checkboxStates);
   }
-
-  restoreSelection(selection, previousRanges);
 
   if (!success) {
     alert(UI_TEXT.COPY_FAILED);
