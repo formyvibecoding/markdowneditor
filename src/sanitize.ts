@@ -77,6 +77,7 @@ const ALLOWED_TAGS = [
   'img',
   'figure',
   'figcaption',
+  'input',
   // 其他
   'details',
   'summary',
@@ -119,6 +120,10 @@ const ALLOWED_ATTR = [
   'data-*',
   'aria-*',
   'role',
+  'type',
+  'checked',
+  'disabled',
+  'value',
 ];
 
 /**
@@ -242,6 +247,16 @@ DOMPurify.addHook('afterSanitizeAttributes', (node: Element) => {
   if (node.tagName === 'IMG') {
     if (!node.hasAttribute('loading')) {
       node.setAttribute('loading', 'lazy');
+    }
+  }
+
+  if (node.tagName === 'INPUT') {
+    const type = node.getAttribute('type');
+    if (type !== 'checkbox') {
+      node.setAttribute('type', 'checkbox');
+    }
+    if (node.hasAttribute('disabled')) {
+      node.removeAttribute('disabled');
     }
   }
 });
