@@ -1,6 +1,6 @@
 /**
  * Markdown 编辑器主入口
- * @version 2.1.0
+ * @version 2.2.0
  */
 
 import { marked } from 'marked';
@@ -54,8 +54,16 @@ function setupErrorBoundary(): void {
  * 配置 Marked.js
  */
 function configureMarked(): void {
+  const renderer = new marked.Renderer();
+
+  renderer.checkbox = (checked: boolean): string => {
+    const checkedAttr = checked ? ' checked' : '';
+    return `<input type="checkbox"${checkedAttr}>`;
+  };
+
   marked.setOptions({
     ...MARKED_OPTIONS,
+    renderer,
   });
 }
 
