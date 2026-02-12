@@ -5,6 +5,12 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.4.1] - 2026-02-12
+
+### 修复
+
+- 修复历史记录面板因 CSS `display: flex` 覆盖 `hidden` 属性而默认始终可见且无法关闭的问题
+
 ## [2.4.0] - 2026-02-12
 
 ### 新增

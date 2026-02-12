@@ -154,6 +154,10 @@ h1 {
     z-index: 1000;
 }
 
+.history-overlay[hidden] {
+    display: none;
+}
+
 .history-panel {
     width: min(620px, 94vw);
     max-height: min(78vh, 760px);
