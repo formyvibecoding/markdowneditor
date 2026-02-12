@@ -25,6 +25,26 @@ body {
   gap: 10px;
 }
 
+.preview-toast-container {
+  position: fixed;
+  top: 56px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-toast {
+  max-width: 320px;
+  background: rgba(166, 47, 47, 0.95);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  font-size: 13px;
+}
+
 .pdf-btn {
   color: white;
   border: none;
@@ -215,6 +235,20 @@ function setCopyButtonState(text, disabled) {
   copyBtn.disabled = disabled;
 }
 
+function showErrorToast(message) {
+  let container = document.querySelector('.preview-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'preview-toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'preview-toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 2200);
+}
+
 function restoreSelection(selection, ranges) {
   if (!selection) return;
   selection.removeAllRanges();
@@ -270,7 +304,7 @@ async function copyPreviewContent() {
 
   const selection = window.getSelection();
   if (!selection) {
-    alert(UI_TEXT.COPY_FAILED);
+    showErrorToast(UI_TEXT.COPY_FAILED);
     setCopyButtonState(UI_TEXT.COPY, false);
     return;
   }
@@ -308,7 +342,7 @@ async function copyPreviewContent() {
   }
 
   if (!success) {
-    alert(UI_TEXT.COPY_FAILED);
+    showErrorToast(UI_TEXT.COPY_FAILED);
     setCopyButtonState(UI_TEXT.COPY, false);
     return;
   }
@@ -379,7 +413,7 @@ pagedBtn.addEventListener('click', async () => {
       .save();
   } catch (err) {
     console.error('PDF 生成失败:', err);
-    alert('生成 PDF 时出错: ' + err.message);
+    showErrorToast('生成 PDF 时出错: ' + err.message);
   } finally {
     contentArea.setAttribute('style', originalStyle);
     enableButtons();
@@ -441,7 +475,7 @@ singleBtn.addEventListener('click', async () => {
     if (err.message && err.message.includes('CORS')) {
       msg = '可能存在跨域图片加载问题，请检查浏览器控制台。';
     }
-    alert(msg);
+    showErrorToast(msg);
   } finally {
     contentArea.setAttribute('style', originalStyle);
     if (container) container.setAttribute('style', containerStyle);

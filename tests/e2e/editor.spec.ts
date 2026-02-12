@@ -17,6 +17,19 @@ test.describe('Markdown 编辑器', () => {
     await expect(page.locator('#history-toggle-btn')).toBeVisible();
   });
 
+
+  test('历史记录默认关闭并支持 ESC 关闭', async ({ page }) => {
+    const overlay = page.locator('#history-overlay');
+    await expect(overlay).toBeHidden();
+
+    await page.locator('#history-toggle-btn').click();
+    await expect(overlay).toBeVisible();
+    await expect(page.locator('#history-panel')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(overlay).toBeHidden();
+  });
+
   test('初始打开时编辑器应为空', async ({ page }) => {
     const textarea = page.locator('#markdown-input');
     await expect(textarea).toHaveValue('');
@@ -63,20 +76,20 @@ test.describe('Markdown 编辑器', () => {
     await expect(newPage.locator('#download-single-page-pdf-btn')).toHaveText('下载 PDF（单页）');
   });
 
-  test('空内容时下载应该显示警告', async ({ page }) => {
+  test('空内容时下载应该显示内部提示', async ({ page }) => {
     const textarea = page.locator('#markdown-input');
 
-    // 清空内容
     await textarea.fill('');
-    await textarea.fill('   '); // 只有空格
+    await textarea.fill('   ');
 
-    // 监听 alert 对话框
+    let hasDialog = false;
     page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('编辑器内容为空');
-      await dialog.accept();
+      hasDialog = true;
+      await dialog.dismiss();
     });
 
-    // 点击下载按钮
     await page.locator('#download-markdown-btn').click();
+    await expect(page.locator('.app-toast-error').last()).toContainText('编辑器内容为空');
+    expect(hasDialog).toBe(false);
   });
 });

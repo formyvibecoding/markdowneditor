@@ -2,6 +2,8 @@
  * 工具函数模块
  */
 
+import { showErrorToast } from './feedback';
+
 // =============================================================================
 // 类型定义
 // =============================================================================
@@ -205,7 +207,7 @@ export async function safeExecute<T>(
       error instanceof Error ? error.message : String(error);
     // 使用 console.error 而非 console.log
     console.error(`${errorMessage}:`, error);
-    alert(`${errorMessage}: ${message}`);
+    showErrorToast(`${errorMessage}: ${message}`);
     return null;
   }
 }

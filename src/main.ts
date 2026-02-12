@@ -1,6 +1,6 @@
 /**
  * Markdown 编辑器主入口
- * @version 2.3.0
+ * @version 2.4.0
  */
 
 import { marked } from 'marked';
@@ -25,13 +25,14 @@ import {
   saveHistoryEntry,
   type HistoryEntry,
 } from './history';
+import { showConfirm, showErrorToast } from './feedback';
 
 function setupErrorBoundary(): void {
   window.onerror = (message, source, lineno, colno, error): boolean => {
     console.error('全局错误:', { message, source, lineno, colno, error });
 
     if (import.meta.env.PROD) {
-      alert('应用发生错误，请刷新页面重试。如果问题持续存在，请联系技术支持。');
+      showErrorToast('应用发生错误，请刷新页面重试。如果问题持续存在，请联系技术支持。');
     }
 
     return false;
@@ -41,7 +42,7 @@ function setupErrorBoundary(): void {
     console.error('未处理的 Promise 拒绝:', event.reason);
 
     if (import.meta.env.PROD) {
-      alert('操作失败，请重试。');
+      showErrorToast('操作失败，请重试。');
     }
   };
 }
@@ -80,7 +81,7 @@ function downloadMarkdown(textarea: HTMLTextAreaElement): void {
   const content = textarea.value;
 
   if (!content.trim()) {
-    alert(UI_TEXT.ERRORS.EMPTY_CONTENT);
+    showErrorToast(UI_TEXT.ERRORS.EMPTY_CONTENT);
     return;
   }
 
@@ -103,7 +104,7 @@ function openPreviewInNewTab(textarea: HTMLTextAreaElement): void {
     previewWindow.document.close();
     previewWindow.focus();
   } else {
-    alert(UI_TEXT.ERRORS.POPUP_BLOCKED);
+    showErrorToast(UI_TEXT.ERRORS.POPUP_BLOCKED);
   }
 }
 
@@ -119,7 +120,7 @@ function getHistoryPreview(content: string): string {
 function renderHistoryList(
   listElement: HTMLElement,
   entries: HistoryEntry[],
-  onRestore: (entry: HistoryEntry) => void,
+  onRestore: (entry: HistoryEntry) => Promise<void>,
 ): void {
   if (!entries.length) {
     listElement.innerHTML = '<p class="history-empty">暂无历史记录。</p>';
@@ -171,7 +172,7 @@ function renderHistoryList(
     button.addEventListener('click', () => {
       const targetEntry = entries.find(entry => entry.id === button.dataset.entryId);
       if (targetEntry) {
-        onRestore(targetEntry);
+        void onRestore(targetEntry);
       }
     });
   });
@@ -201,19 +202,28 @@ function initHistory(
 
   const openHistory = (): void => {
     historyOverlay.hidden = false;
+    document.body.classList.add('modal-open');
+    historyCloseBtn.focus();
     renderHistoryList(historyList, loadHistoryEntries(), entry => {
-      const shouldRestore = confirm('恢复该草稿将覆盖当前编辑内容，是否继续？');
-      if (!shouldRestore) {
-        return;
-      }
+      return showConfirm({
+        title: '恢复草稿',
+        message: '恢复该草稿将覆盖当前编辑内容，是否继续？',
+        confirmText: '恢复',
+      }).then(shouldRestore => {
+        if (!shouldRestore) {
+          return;
+        }
 
-      onRestore(entry.content);
-      historyOverlay.hidden = true;
+        onRestore(entry.content);
+        closeHistory();
+      });
     });
   };
 
   const closeHistory = (): void => {
     historyOverlay.hidden = true;
+    document.body.classList.remove('modal-open');
+    historyToggleBtn.focus();
   };
 
   historyToggleBtn.addEventListener('click', openHistory);
@@ -225,14 +235,24 @@ function initHistory(
     }
   });
 
-  historyClearBtn.addEventListener('click', () => {
-    const shouldClear = confirm('确定清空全部历史记录吗？');
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !historyOverlay.hidden) {
+      closeHistory();
+    }
+  });
+
+  historyClearBtn.addEventListener('click', async () => {
+    const shouldClear = await showConfirm({
+      title: '清空历史记录',
+      message: '确定清空全部历史记录吗？',
+      confirmText: '清空',
+    });
     if (!shouldClear) {
       return;
     }
 
     clearHistoryEntries();
-    renderHistoryList(historyList, [], () => undefined);
+    renderHistoryList(historyList, [], async () => undefined);
   });
 
   const persistDraft = debounce(() => {
