@@ -14,13 +14,12 @@ test.describe('Markdown 编辑器', () => {
     await expect(page.locator('#markdown-input')).toBeVisible();
     await expect(page.locator('#preview-new-tab-btn')).toBeVisible();
     await expect(page.locator('#download-markdown-btn')).toBeVisible();
+    await expect(page.locator('#history-toggle-btn')).toBeVisible();
   });
 
-  test('应该在编辑器中显示示例内容', async ({ page }) => {
+  test('初始打开时编辑器应为空', async ({ page }) => {
     const textarea = page.locator('#markdown-input');
-    const content = await textarea.inputValue();
-    expect(content).toContain('# 一级标题');
-    expect(content).toContain('## 二级标题');
+    await expect(textarea).toHaveValue('');
   });
 
   test('应该允许用户编辑内容', async ({ page }) => {
