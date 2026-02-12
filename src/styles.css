@@ -149,15 +149,17 @@ h1 {
     inset: 0;
     background-color: rgba(0, 0, 0, 0.25);
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    align-items: center;
     z-index: 1000;
 }
 
 .history-panel {
-    width: min(420px, 95vw);
-    height: 100%;
+    width: min(620px, 94vw);
+    max-height: min(78vh, 760px);
     background-color: #fcfcfc;
-    box-shadow: -4px 0 18px rgba(0, 0, 0, 0.16);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
 }
@@ -196,6 +198,7 @@ h1 {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    max-height: min(60vh, 600px);
 }
 
 .history-month h3 {
@@ -256,7 +259,138 @@ h1 {
     font-size: 14px;
 }
 
+
+.history-close-btn {
+    font-size: 20px;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.modal-open {
+    overflow: hidden;
+}
+
+.app-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.app-toast {
+    min-width: 220px;
+    max-width: 320px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #fff;
+    background-color: rgba(44, 62, 80, 0.94);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    font-size: 13px;
+    transition: opacity 0.18s ease;
+}
+
+.app-toast-error {
+    background-color: rgba(166, 47, 47, 0.95);
+}
+
+.app-toast-hide {
+    opacity: 0;
+}
+
+.app-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.34);
+    z-index: 1300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.app-modal {
+    width: min(440px, 94vw);
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    padding: 14px 16px 16px;
+}
+
+.app-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.app-modal-header h2 {
+    font-size: 18px;
+    color: #2c3e50;
+}
+
+.app-modal-close {
+    border: 1px solid #dedede;
+    background: #fff;
+    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 20px;
+    color: #5c3e2e;
+}
+
+.app-modal-message {
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 14px;
+}
+
+.app-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.app-modal-btn {
+    border: 1px solid #d2d2d2;
+    background: #fff;
+    color: #5c3e2e;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.app-modal-confirm {
+    background-color: #5c3e2e;
+    color: #fff;
+    border-color: #5c3e2e;
+}
+
 @media (max-width: 768px) {
+    .history-panel {
+        width: 95vw;
+        max-height: 84vh;
+    }
+
+    .history-list {
+        max-height: 64vh;
+    }
+
+    .app-toast-container {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+    }
+
+    .app-toast {
+        max-width: 100%;
+    }
+
     .editor-container {
         flex-direction: column;
         aspect-ratio: auto;

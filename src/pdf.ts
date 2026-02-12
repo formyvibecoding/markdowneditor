@@ -5,6 +5,7 @@
 
 import { A4, PDF_CONFIG, UI_TEXT, STYLES, CDN_RESOURCES } from './config';
 import { loadScriptWithFallback } from './utils';
+import { showErrorToast } from './feedback';
 
 // =============================================================================
 // 类型定义
@@ -334,7 +335,7 @@ export async function generatePagedPdf(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('PDF 生成失败:', error);
-    alert(`${UI_TEXT.ERRORS.PDF_GENERATION_FAILED}: ${message}`);
+    showErrorToast(`${UI_TEXT.ERRORS.PDF_GENERATION_FAILED}: ${message}`);
   } finally {
     restoreStyles(contentArea, null, savedStyles);
     enableButtons(buttonState);
@@ -416,7 +417,7 @@ export async function generateSinglePagePdf(
     if (message.includes('CORS')) {
       alertMessage = UI_TEXT.ERRORS.CORS_ERROR;
     }
-    alert(alertMessage);
+    showErrorToast(alertMessage);
   } finally {
     restoreStyles(contentArea, container, savedStyles);
     enableButtons(buttonState);
