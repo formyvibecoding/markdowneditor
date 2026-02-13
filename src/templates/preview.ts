@@ -14,6 +14,7 @@ body {
   margin: 0;
   padding: 0;
   background-color: ${STYLES.COLORS.BACKGROUND};
+  font-family: ${STYLES.FONTS.PREVIEW};
 }
 
 .preview-controls {
@@ -47,6 +48,7 @@ body {
 
 .pdf-btn {
   color: white;
+  font-family: ${STYLES.FONTS.PREVIEW};
   border: none;
   border-radius: 4px;
   padding: 8px 15px;
