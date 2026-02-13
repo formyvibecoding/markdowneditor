@@ -6,7 +6,7 @@
 // =============================================================================
 // 版本信息
 // =============================================================================
-export const VERSION = '2.4.2';
+export const VERSION = '2.4.3';
 
 // =============================================================================
 // A4 尺寸常量
@@ -96,8 +96,7 @@ export const STYLES = {
     BODY: '"Helvetica Neue", Arial, sans-serif',
     EDITOR: '"Courier New", monospace',
     BUTTON: "'Times New Roman', Times, serif",
-    PREVIEW:
-      '-apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", sans-serif',
+    PREVIEW: "'Times New Roman', Times, serif",
   },
   /** 页码字体大小 (pt) */
   PAGE_NUMBER_FONT_SIZE: 9,
