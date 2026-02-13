@@ -1,6 +1,6 @@
 /**
  * Markdown 编辑器主入口
- * @version 2.4.1
+ * @version 2.4.2
  */
 
 import { marked } from 'marked';
