@@ -19,6 +19,9 @@ export interface MonthGroup {
 
 const STORAGE_KEY = 'markdown-editor-history-v1';
 const MAX_HISTORY_ITEMS = 300;
+const MERGE_WINDOW_MS = 3 * 60 * 1000;
+const MIN_MEANINGFUL_DIFF = 20;
+const SIMILARITY_THRESHOLD = 0.92;
 
 function safeParse(value: string | null): HistoryEntry[] {
   if (!value) {
@@ -54,6 +57,59 @@ function persistHistory(entries: HistoryEntry[]): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
+function normalizeForCompare(content: string): string {
+  return content
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase();
+}
+
+function getContentSimilarity(a: string, b: string): number {
+  const maxLength = Math.max(a.length, b.length);
+  if (!maxLength) {
+    return 1;
+  }
+
+  let sameCount = 0;
+  const minLength = Math.min(a.length, b.length);
+
+  for (let index = 0; index < minLength; index += 1) {
+    if (a[index] === b[index]) {
+      sameCount += 1;
+    }
+  }
+
+  return sameCount / maxLength;
+}
+
+function shouldMergeWithLatest(latestEntry: HistoryEntry | undefined, content: string): boolean {
+  if (!latestEntry) {
+    return false;
+  }
+
+  const now = Date.now();
+  const latestTime = new Date(latestEntry.createdAt).getTime();
+  const withinMergeWindow = now - latestTime <= MERGE_WINDOW_MS;
+
+  if (!withinMergeWindow) {
+    return false;
+  }
+
+  const normalizedCurrent = normalizeForCompare(content);
+  const normalizedLatest = normalizeForCompare(latestEntry.content);
+
+  if (normalizedCurrent === normalizedLatest) {
+    return true;
+  }
+
+  const lengthDiff = Math.abs(normalizedCurrent.length - normalizedLatest.length);
+  if (lengthDiff >= MIN_MEANINGFUL_DIFF) {
+    return false;
+  }
+
+  return getContentSimilarity(normalizedCurrent, normalizedLatest) >= SIMILARITY_THRESHOLD;
+}
+
 export function saveHistoryEntry(content: string): HistoryEntry[] {
   const normalized = content.trim();
 
@@ -63,6 +119,18 @@ export function saveHistoryEntry(content: string): HistoryEntry[] {
 
   const entries = loadHistoryEntries();
   const latestEntry = entries[0];
+
+  if (shouldMergeWithLatest(latestEntry, content)) {
+    const mergedLatest: HistoryEntry = {
+      ...latestEntry!,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+
+    const mergedEntries = [mergedLatest, ...entries.slice(1)];
+    persistHistory(mergedEntries);
+    return mergedEntries;
+  }
 
   if (latestEntry?.content === content) {
     return entries;
