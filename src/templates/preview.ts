@@ -125,6 +125,44 @@ body {
 }
 
 /* 表格样式 */
+.markdown-body table {
+  position: relative;
+}
+
+.markdown-body .table-with-copy {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.markdown-body .table-with-copy .table-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #fff;
+  background: rgba(33, 37, 41, 0.75);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.markdown-body .table-with-copy:hover .table-copy-btn,
+.markdown-body .table-with-copy .table-copy-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.markdown-body .table-with-copy .table-copy-btn:hover,
+.markdown-body .table-with-copy .table-copy-btn:focus-visible {
+  background: rgba(33, 37, 41, 0.9);
+}
+
 .markdown-body table th {
   background-color: #e9ecef;
   font-weight: 600;
@@ -277,6 +315,66 @@ function restoreCheckboxAttributes(states) {
     } else {
       input.removeAttribute('checked');
     }
+  });
+}
+
+function wrapTablesWithCopyButton() {
+  if (!contentArea) return;
+  const tables = contentArea.querySelectorAll('table');
+
+  tables.forEach((table) => {
+    if (table.closest('.table-with-copy')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'table-with-copy';
+
+    const copyTableButton = document.createElement('button');
+    copyTableButton.className = 'table-copy-btn';
+    copyTableButton.type = 'button';
+    copyTableButton.textContent = '复制表格';
+    copyTableButton.setAttribute('aria-label', '复制表格');
+
+    copyTableButton.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const tableHtml = table.outerHTML;
+      const tableText = table.innerText;
+      let copied = false;
+
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': new Blob([tableHtml], { type: 'text/html' }),
+              'text/plain': new Blob([tableText], { type: 'text/plain' }),
+            }),
+          ]);
+          copied = true;
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(tableText);
+          copied = true;
+        }
+      } catch (err) {
+        copied = false;
+      }
+
+      if (!copied) {
+        showErrorToast(UI_TEXT.COPY_FAILED);
+        return;
+      }
+
+      const originalText = copyTableButton.textContent;
+      copyTableButton.textContent = '已复制';
+      copyTableButton.disabled = true;
+      setTimeout(() => {
+        copyTableButton.textContent = originalText || '复制表格';
+        copyTableButton.disabled = false;
+      }, 1200);
+    });
+
+    table.parentNode?.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+    wrapper.appendChild(copyTableButton);
   });
 }
 
@@ -488,6 +586,8 @@ singleBtn.addEventListener('click', async () => {
 if (copyBtn) {
   copyBtn.addEventListener('click', copyPreviewContent);
 }
+
+wrapTablesWithCopyButton();
 
 // 预加载库
 ensureLibs().catch(() => {});
