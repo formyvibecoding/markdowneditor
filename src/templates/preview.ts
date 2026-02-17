@@ -185,6 +185,31 @@ body {
   word-break: normal;
   overflow-wrap: break-word;
 }
+
+.markdown-body .color-code-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.markdown-body .color-swatch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.markdown-body .color-swatch-btn .swatch {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
 `;
 
 // =============================================================================
@@ -375,6 +400,108 @@ function wrapTablesWithCopyButton() {
     table.parentNode?.insertBefore(wrapper, table);
     wrapper.appendChild(table);
     wrapper.appendChild(copyTableButton);
+  });
+}
+
+function createColorSwatchButton(colorCode) {
+  const button = document.createElement('button');
+  button.className = 'color-swatch-btn';
+  button.type = 'button';
+  button.setAttribute('title', '点击复制颜色值 ' + colorCode);
+  button.setAttribute('aria-label', '复制颜色值 ' + colorCode);
+
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('class', 'swatch');
+  svg.setAttribute('width', '10');
+  svg.setAttribute('height', '10');
+  svg.setAttribute('viewBox', '0 0 10 10');
+
+  const rect = document.createElementNS(svgNs, 'rect');
+  rect.setAttribute('width', '10');
+  rect.setAttribute('height', '10');
+  rect.setAttribute('fill', colorCode);
+  rect.setAttribute('stroke', '#e0e0e6');
+  rect.setAttribute('stroke-width', '1');
+  rect.setAttribute('rx', '2');
+
+  svg.appendChild(rect);
+  button.appendChild(svg);
+
+  button.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(colorCode);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = colorCode;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+    } catch (err) {
+      showErrorToast(UI_TEXT.COPY_FAILED);
+    }
+  });
+
+  return button;
+}
+
+function enhanceColorCodes() {
+  if (!contentArea) return;
+
+  const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let node = walker.nextNode();
+
+  while (node) {
+    const parentElement = node.parentElement;
+    if (
+      parentElement &&
+      !parentElement.closest('.color-code-inline') &&
+      /#[0-9a-fA-F]{6}\\b/.test(node.textContent || '')
+    ) {
+      textNodes.push(node);
+    }
+    node = walker.nextNode();
+  }
+
+  const colorPattern = /#[0-9a-fA-F]{6}\\b/g;
+
+  textNodes.forEach((textNode) => {
+    const text = textNode.textContent || '';
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match;
+
+    while ((match = colorPattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      }
+
+      const colorCode = match[0];
+      const wrapper = document.createElement('span');
+      wrapper.className = 'color-code-inline';
+
+      wrapper.appendChild(createColorSwatchButton(colorCode));
+      wrapper.appendChild(document.createTextNode(colorCode));
+      fragment.appendChild(wrapper);
+
+      lastIndex = match.index + colorCode.length;
+    }
+
+    if (lastIndex < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+
+    textNode.parentNode?.replaceChild(fragment, textNode);
   });
 }
 
@@ -588,6 +715,7 @@ if (copyBtn) {
 }
 
 wrapTablesWithCopyButton();
+enhanceColorCodes();
 
 // 预加载库
 ensureLibs().catch(() => {});
