@@ -466,14 +466,14 @@ function enhanceColorCodes() {
     if (
       parentElement &&
       !parentElement.closest('.color-code-inline') &&
-      /#[0-9a-fA-F]{6}\b/.test(node.textContent || '')
+      /#[0-9a-fA-F]{6}\\b/.test(node.textContent || '')
     ) {
       textNodes.push(node);
     }
     node = walker.nextNode();
   }
 
-  const colorPattern = /#[0-9a-fA-F]{6}\b/g;
+  const colorPattern = /#[0-9a-fA-F]{6}\\b/g;
 
   textNodes.forEach((textNode) => {
     const text = textNode.textContent || '';

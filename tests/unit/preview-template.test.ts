@@ -10,6 +10,7 @@ describe('preview color swatch enhancement', () => {
     expect(html).toContain('function enhanceColorCodes()');
     expect(html).toContain('createColorSwatchButton(colorCode)');
     expect(html).toContain('enhanceColorCodes();');
+    expect(html).toContain('/#[0-9a-fA-F]{6}\\b/g');
     expect(html).toContain('点击复制颜色值');
   });
 });
