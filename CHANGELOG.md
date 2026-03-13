@@ -5,6 +5,16 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.6.1] - 2026-03-13
+
+### 修复
+
+- **预览和导出字体修复**：
+  - 正文（预览页 + 长图导出）改用中英日多语言最佳可读性字体栈：
+    `-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif`
+  - 修复部分汉字（如"保"）字重/大小与周围文字不一致的问题（Times New Roman 无 CJK 字形导致 fallback 混乱）
+  - 按钮保持衬线字体 `Times New Roman, Times, serif`，样式风格不变
+
 ## [2.6.0] - 2026-03-13
 
 ### 新增

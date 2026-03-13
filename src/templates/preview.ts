@@ -48,7 +48,7 @@ body {
 
 .pdf-btn {
   color: white;
-  font-family: ${STYLES.FONTS.PREVIEW};
+  font-family: ${STYLES.FONTS.BUTTON};
   border: none;
   border-radius: 4px;
   padding: 8px 15px;
