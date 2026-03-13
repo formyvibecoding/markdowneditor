@@ -5,6 +5,14 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.7.2] - 2026-03-13
+
+### 修复
+
+- **分页 PDF 页脚乱码修复**：
+  - 页码格式从中文"第 X 页 / 共 Y 页"改为"Page X / Y"
+  - jsPDF 内置字体（Helvetica）不支持 CJK 字形，导致中文页码显示为乱码方块
+
 ## [2.7.1] - 2026-03-13
 
 ### 改进
