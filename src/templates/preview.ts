@@ -114,8 +114,31 @@ body {
   text-align: left;
 }
 
-/* 分页打印样式 */
+/* 打印样式 */
 @media print {
+  .preview-controls,
+  .table-copy-btn,
+  .color-swatch-btn {
+    display: none !important;
+  }
+  body {
+    background-color: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+  .markdown-body {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
   h1, h2, h3, h4, h5, h6,
   img, table, pre, figure, blockquote,
   ul, ol, dl {
@@ -242,8 +265,7 @@ const UI_TEXT = {
   PAGED: '${UI_TEXT.PDF_BUTTONS.PAGED}',
   PAGED_LOADING: '${UI_TEXT.PDF_BUTTONS.PAGED_LOADING}',
   SINGLE: '${UI_TEXT.PDF_BUTTONS.SINGLE}',
-  SINGLE_RENDERING: '${UI_TEXT.PDF_BUTTONS.SINGLE_RENDERING}',
-  SINGLE_GENERATING: '${UI_TEXT.PDF_BUTTONS.SINGLE_GENERATING}',
+  SINGLE_PREPARING: '${UI_TEXT.PDF_BUTTONS.SINGLE_PREPARING}',
   COPY: '${UI_TEXT.COPY_BUTTONS.COPY}',
   COPYING: '${UI_TEXT.COPY_BUTTONS.COPYING}',
   COPIED: '${UI_TEXT.COPY_BUTTONS.COPIED}',
@@ -655,66 +677,76 @@ pagedBtn.addEventListener('click', async () => {
   }
 });
 
-// 单页 PDF 生成
-singleBtn.addEventListener('click', async () => {
-  pagedBtn.disabled = true;
+// 单页 PDF（window.print 真实文字 PDF）
+singleBtn.addEventListener('click', () => {
   singleBtn.disabled = true;
-  singleBtn.textContent = UI_TEXT.SINGLE_RENDERING;
-
-  const originalStyle = contentArea.getAttribute('style') || '';
-  const container = document.querySelector('.container');
-  const containerStyle = container ? container.getAttribute('style') || '' : '';
+  singleBtn.textContent = UI_TEXT.SINGLE_PREPARING;
 
   try {
-    await ensureLibs();
+    // 创建隐藏克隆以在打印宽度下测量内容高度
+    const clone = contentArea.cloneNode(true);
+    clone.style.position = 'absolute';
+    clone.style.left = '-99999px';
+    clone.style.top = '0';
+    clone.style.width = '680px'; // 180mm (A4 210mm - 15mm*2 margin) at 96dpi
+    clone.style.maxWidth = '680px';
+    clone.style.padding = '0';
+    clone.style.margin = '0';
+    clone.style.boxShadow = 'none';
+    clone.style.borderRadius = '0';
+    clone.style.visibility = 'hidden';
+    document.body.appendChild(clone);
 
-    contentArea.style.width = A4_CONTENT_WIDTH_PX + 'px';
-    contentArea.style.margin = '0 auto';
-    contentArea.style.padding = '10mm';
-    contentArea.style.overflow = 'visible';
-    contentArea.style.boxShadow = 'none';
+    const contentHeightPx = clone.scrollHeight;
+    document.body.removeChild(clone);
 
-    const canvas = await html2canvas(contentArea, {
-      scale: SCALE,
-      useCORS: true,
-      logging: false,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-      letterRendering: true,
-      width: A4_CONTENT_WIDTH_PX,
-      windowWidth: A4_CONTENT_WIDTH_PX,
-      height: contentArea.scrollHeight,
-      x: 0,
-      y: 0,
-    });
+    // px → mm 转换 (1 CSS px = 1/96 inch = 0.264583mm)
+    const PX_TO_MM = 0.264583;
+    const marginMm = 15;
+    const contentHeightMm = contentHeightPx * PX_TO_MM;
+    const pageHeightMm = Math.ceil(contentHeightMm) + (marginMm * 2) + 10; // +10mm buffer
 
-    singleBtn.textContent = UI_TEXT.SINGLE_GENERATING;
+    // 注入单页打印样式
+    const printStyle = document.createElement('style');
+    printStyle.id = 'single-page-print-css';
+    printStyle.textContent =
+      '@page { size: 210mm ' + pageHeightMm + 'mm; margin: ' + marginMm + 'mm; }' +
+      '@media print {' +
+      '  h1, h2, h3, h4, h5, h6,' +
+      '  img, table, pre, figure, blockquote,' +
+      '  ul, ol, dl {' +
+      '    break-inside: auto !important;' +
+      '    page-break-inside: auto !important;' +
+      '  }' +
+      '  h1, h2 {' +
+      '    break-after: auto !important;' +
+      '    page-break-after: auto !important;' +
+      '  }' +
+      '  h1 {' +
+      '    break-before: auto !important;' +
+      '    page-break-before: auto !important;' +
+      '  }' +
+      '}';
+    document.head.appendChild(printStyle);
 
-    const imgData = canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
-    const pdfWidth = A4_WIDTH_MM;
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    // 恢复按钮状态后再打印，避免按钮被禁用时打印
+    singleBtn.disabled = false;
+    singleBtn.textContent = UI_TEXT.SINGLE;
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: [pdfWidth, pdfHeight],
-      compress: true,
-    });
+    window.print();
 
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save('${PDF_CONFIG.SINGLE_PAGE_FILENAME}');
+    // afterprint 清理动态样式
+    const cleanup = () => {
+      const el = document.getElementById('single-page-print-css');
+      if (el) el.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
   } catch (err) {
-    console.error('单页 PDF 生成失败:', err);
-    let msg = '生成 PDF 时出错: ' + err.message;
-    if (err.message && err.message.includes('CORS')) {
-      msg = '可能存在跨域图片加载问题，请检查浏览器控制台。';
-    }
-    showErrorToast(msg);
-  } finally {
-    contentArea.setAttribute('style', originalStyle);
-    if (container) container.setAttribute('style', containerStyle);
-    enableButtons();
+    console.error('准备打印失败:', err);
+    showErrorToast('准备打印时出错: ' + (err.message || err));
+    singleBtn.disabled = false;
+    singleBtn.textContent = UI_TEXT.SINGLE;
   }
 });
 

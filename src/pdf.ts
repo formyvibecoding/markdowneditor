@@ -77,34 +77,6 @@ interface JsPDF {
   save(filename: string): void;
 }
 
-interface JsPDFConstructor {
-  new (options: {
-    orientation: string;
-    unit: string;
-    format: [number, number];
-    compress: boolean;
-  }): JsPDF;
-}
-
-/** html2canvas 库类型 */
-interface Html2Canvas {
-  (element: HTMLElement, options: Html2CanvasOptions): Promise<HTMLCanvasElement>;
-}
-
-interface Html2CanvasOptions {
-  scale: number;
-  useCORS: boolean;
-  logging: boolean;
-  allowTaint: boolean;
-  backgroundColor: string;
-  letterRendering: boolean;
-  width: number;
-  windowWidth: number;
-  height: number;
-  x: number;
-  y: number;
-}
-
 /** 按钮状态管理 */
 interface ButtonState {
   pagedBtn: HTMLButtonElement;
@@ -164,16 +136,6 @@ function enableButtons(state: ButtonState): void {
   state.singleBtn.disabled = false;
   state.pagedBtn.textContent = UI_TEXT.PDF_BUTTONS.PAGED;
   state.singleBtn.textContent = UI_TEXT.PDF_BUTTONS.SINGLE;
-}
-
-/**
- * 更新单页按钮文字
- */
-function updateSingleButtonText(
-  state: ButtonState,
-  text: string
-): void {
-  state.singleBtn.textContent = text;
 }
 
 // =============================================================================
@@ -343,86 +305,9 @@ export async function generatePagedPdf(
 }
 
 // =============================================================================
-// 单页 PDF 生成
+// 单页 PDF：已改用 window.print() 方案（见 templates/preview.ts）
+// generateSinglePagePdf 已移除
 // =============================================================================
-
-/**
- * 生成单页 PDF
- */
-export async function generateSinglePagePdf(
-  contentArea: HTMLElement,
-  buttonState: ButtonState
-): Promise<void> {
-  buttonState.pagedBtn.disabled = true;
-  buttonState.singleBtn.disabled = true;
-  buttonState.singleBtn.textContent = UI_TEXT.PDF_BUTTONS.SINGLE_RENDERING;
-
-  const container = contentArea.closest('.container') as HTMLElement | null;
-  const savedStyles = saveStyles(contentArea, container);
-
-  try {
-    await ensureLibsLoaded();
-
-    // 应用样式
-    applyA4Styles(contentArea);
-    contentArea.style.overflow = 'visible';
-    contentArea.style.boxShadow = 'none';
-
-    const html2canvas = (window as unknown as { html2canvas: Html2Canvas })
-      .html2canvas;
-
-    const options: Html2CanvasOptions = {
-      scale: PDF_CONFIG.SCALE,
-      useCORS: true,
-      logging: false,
-      allowTaint: false,
-      backgroundColor: STYLES.COLORS.WHITE,
-      letterRendering: true,
-      width: A4.CONTENT_WIDTH_PX,
-      windowWidth: A4.CONTENT_WIDTH_PX,
-      height: contentArea.scrollHeight,
-      x: 0,
-      y: 0,
-    };
-
-    const canvas = await html2canvas(contentArea, options);
-
-    updateSingleButtonText(buttonState, UI_TEXT.PDF_BUTTONS.SINGLE_GENERATING);
-
-    const imgData = canvas.toDataURL('image/jpeg', PDF_CONFIG.IMAGE_QUALITY);
-    const imgWidth = canvas.width;
-    const imgHeight = canvas.height;
-
-    // 计算 PDF 尺寸
-    const pdfWidth = A4.WIDTH_MM;
-    const pdfHeight = (imgHeight * pdfWidth) / imgWidth;
-
-    // 获取 jsPDF 构造函数
-    const { jsPDF } = window as unknown as { jsPDF: JsPDFConstructor };
-
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: [pdfWidth, pdfHeight],
-      compress: true,
-    });
-
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(PDF_CONFIG.SINGLE_PAGE_FILENAME);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error('单页 PDF 生成失败:', error);
-
-    let alertMessage = `${UI_TEXT.ERRORS.PDF_GENERATION_FAILED}: ${message}`;
-    if (message.includes('CORS')) {
-      alertMessage = UI_TEXT.ERRORS.CORS_ERROR;
-    }
-    showErrorToast(alertMessage);
-  } finally {
-    restoreStyles(contentArea, container, savedStyles);
-    enableButtons(buttonState);
-  }
-}
 
 // =============================================================================
 // 初始化函数
