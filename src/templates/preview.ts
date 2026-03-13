@@ -47,52 +47,25 @@ body {
 }
 
 .pdf-btn {
-  color: white;
-  font-family: ${STYLES.FONTS.BUTTON};
-  border: none;
-  border-radius: 4px;
-  padding: 8px 15px;
+  background: transparent;
+  border: 1px solid #d2d2d2;
+  color: #5c3e2e;
+  padding: 4px 10px;
+  border-radius: 6px;
   font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  font-family: inherit;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.pdf-btn:hover:not(:disabled) {
+  background-color: rgba(92, 62, 46, 0.08);
+  border-color: #5c3e2e;
 }
 
 .pdf-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
-}
-
-#download-pdf-btn {
-  background-color: ${STYLES.COLORS.PDF_BUTTON_PAGED};
-}
-
-#download-pdf-btn:hover:not(:disabled) {
-  background-color: ${STYLES.COLORS.PDF_BUTTON_PAGED_HOVER};
-}
-
-#download-single-page-pdf-btn {
-  background-color: ${STYLES.COLORS.PDF_BUTTON_SINGLE};
-}
-
-#download-single-page-pdf-btn:hover:not(:disabled) {
-  background-color: ${STYLES.COLORS.PDF_BUTTON_SINGLE_HOVER};
-}
-
-#copy-preview-btn {
-  background-color: ${STYLES.COLORS.COPY_BUTTON};
-}
-
-#copy-preview-btn:hover:not(:disabled) {
-  background-color: ${STYLES.COLORS.COPY_BUTTON_HOVER};
-}
-
-#export-long-image-btn {
-  background-color: ${STYLES.COLORS.LONG_IMAGE_BUTTON};
-}
-
-#export-long-image-btn:hover:not(:disabled) {
-  background-color: ${STYLES.COLORS.LONG_IMAGE_BUTTON_HOVER};
 }
 
 .container {

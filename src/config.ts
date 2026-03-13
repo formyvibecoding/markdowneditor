@@ -6,7 +6,7 @@
 // =============================================================================
 // 版本信息
 // =============================================================================
-export const VERSION = '2.7.0';
+export const VERSION = '2.7.1';
 
 // =============================================================================
 // A4 尺寸常量
@@ -89,14 +89,6 @@ export const STYLES = {
     BUTTON_TEXT: '#5c3e2e',
     WHITE: '#ffffff',
     PAGE_NUMBER: { R: 128, G: 128, B: 128 },
-    PDF_BUTTON_PAGED: '#28a745',
-    PDF_BUTTON_PAGED_HOVER: '#218838',
-    PDF_BUTTON_SINGLE: '#007bff',
-    PDF_BUTTON_SINGLE_HOVER: '#0056b3',
-    COPY_BUTTON: '#6f42c1',
-    COPY_BUTTON_HOVER: '#5a32a3',
-    LONG_IMAGE_BUTTON: '#fd7e14',
-    LONG_IMAGE_BUTTON_HOVER: '#e06b09',
   },
   /** 字体 */
   FONTS: {
