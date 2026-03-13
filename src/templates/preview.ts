@@ -633,8 +633,8 @@ pagedBtn.addEventListener('click', async () => {
           pdf.setFontSize(${STYLES.PAGE_NUMBER_FONT_SIZE});
           pdf.setTextColor(${STYLES.COLORS.PAGE_NUMBER.R}, ${STYLES.COLORS.PAGE_NUMBER.G}, ${STYLES.COLORS.PAGE_NUMBER.B});
           pdf.text(
-            'Page ' + i + ' / ' + totalPages,
-            pdf.internal.pageSize.getWidth() - 60,
+            '' + i + ' / ' + totalPages,
+            pdf.internal.pageSize.getWidth() - 30,
             pdf.internal.pageSize.getHeight() - 8
           );
         }

@@ -254,7 +254,7 @@ function addPageNumbers(pdf: JsPDF): void {
     pdf.setTextColor(R, G, B);
     pdf.text(
       UI_TEXT.PAGE_NUMBER_FORMAT(i, totalPages),
-      pdf.internal.pageSize.getWidth() - 60,
+      pdf.internal.pageSize.getWidth() - 30,
       pdf.internal.pageSize.getHeight() - 8
     );
   }

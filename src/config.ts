@@ -74,7 +74,7 @@ export const UI_TEXT = {
   },
   /** 页码格式 */
   PAGE_NUMBER_FORMAT: (current: number, total: number): string =>
-    `Page ${current} / ${total}`,
+    `${current} / ${total}`,
 } as const;
 
 // =============================================================================
