@@ -5,6 +5,14 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.7.3] - 2026-03-13
+
+### 维护
+
+- **开源发布准备**：
+  - 从 git 追踪中移除内部文件（claude.md、AGENTS.md、PCD.md、PRD.md、.claude/）
+  - 更新 .gitignore 排除内部开发文档和 AI 助手配置
+
 ## [2.7.2] - 2026-03-13
 
 ### 修复

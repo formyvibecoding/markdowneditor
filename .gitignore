@@ -35,3 +35,10 @@ yarn-error.log*
 .cache/
 .eslintcache
 .prettier-cache
+
+# Internal / AI assistant config
+.claude/
+claude.md
+AGENTS.md
+PCD.md
+PRD.md
