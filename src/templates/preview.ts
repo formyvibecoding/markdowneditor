@@ -3,7 +3,7 @@
  * 将 HTML 模板从主逻辑中抽离，提高可维护性
  */
 
-import { CDN_RESOURCES, UI_TEXT, STYLES, A4, PDF_CONFIG } from '../config';
+import { CDN_RESOURCES, UI_TEXT, STYLES, A4, PDF_CONFIG, LONG_IMAGE } from '../config';
 
 // =============================================================================
 // CSS 样式模板
@@ -85,6 +85,14 @@ body {
 
 #copy-preview-btn:hover:not(:disabled) {
   background-color: ${STYLES.COLORS.COPY_BUTTON_HOVER};
+}
+
+#export-long-image-btn {
+  background-color: ${STYLES.COLORS.LONG_IMAGE_BUTTON};
+}
+
+#export-long-image-btn:hover:not(:disabled) {
+  background-color: ${STYLES.COLORS.LONG_IMAGE_BUTTON_HOVER};
 }
 
 .container {
@@ -719,6 +727,186 @@ enhanceColorCodes();
 
 // 预加载库
 ensureLibs().catch(() => {});
+
+// =============================================================================
+// 长图导出
+// =============================================================================
+const longImageBtn = document.getElementById('export-long-image-btn');
+
+const LONG_IMAGE_WIDTH = ${LONG_IMAGE.WIDTH_PX};
+const LONG_IMAGE_SCALE = ${LONG_IMAGE.SCALE};
+const LONG_IMAGE_PADDING = ${LONG_IMAGE.PADDING};
+const LONG_IMAGE_HEADER_PADDING = ${LONG_IMAGE.HEADER_PADDING};
+const LONG_IMAGE_FOOTER_PADDING = ${LONG_IMAGE.FOOTER_PADDING};
+const LONG_IMAGE_WATERMARK = '${LONG_IMAGE.WATERMARK_TEXT}';
+const LONG_IMAGE_FILENAME_PREFIX = '${LONG_IMAGE.FILENAME_PREFIX}';
+
+const LONG_IMAGE_UI = {
+  DEFAULT: '${UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT}',
+  RENDERING: '${UI_TEXT.LONG_IMAGE_BUTTONS.RENDERING}',
+  GENERATING: '${UI_TEXT.LONG_IMAGE_BUTTONS.GENERATING}',
+};
+
+function disableAllButtons(loadingBtn, loadingText) {
+  pagedBtn.disabled = true;
+  singleBtn.disabled = true;
+  if (copyBtn) copyBtn.disabled = true;
+  if (longImageBtn) longImageBtn.disabled = true;
+  loadingBtn.textContent = loadingText;
+}
+
+function enableAllButtons() {
+  pagedBtn.disabled = false;
+  singleBtn.disabled = false;
+  if (copyBtn) copyBtn.disabled = false;
+  if (longImageBtn) {
+    longImageBtn.disabled = false;
+    longImageBtn.textContent = LONG_IMAGE_UI.DEFAULT;
+  }
+  pagedBtn.textContent = UI_TEXT.PAGED;
+  singleBtn.textContent = UI_TEXT.SINGLE;
+}
+
+function generateTimestamp() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate())
+    + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+}
+
+function formatDate() {
+  const now = new Date();
+  return now.getFullYear() + '-'
+    + String(now.getMonth() + 1).padStart(2, '0') + '-'
+    + String(now.getDate()).padStart(2, '0');
+}
+
+if (longImageBtn) {
+  longImageBtn.addEventListener('click', async () => {
+    disableAllButtons(longImageBtn, LONG_IMAGE_UI.RENDERING);
+
+    try {
+      await ensureLibs();
+
+      // 提取标题：优先取第一个 h1，否则 h2，否则用默认
+      const h1 = contentArea.querySelector('h1');
+      const h2 = contentArea.querySelector('h2');
+      const title = (h1 && h1.textContent.trim()) || (h2 && h2.textContent.trim()) || 'Markdown';
+
+      // 创建离屏容器
+      const offscreen = document.createElement('div');
+      offscreen.style.cssText = 'position:absolute;left:-9999px;top:0;z-index:-1;';
+      document.body.appendChild(offscreen);
+
+      // 内层容器（控制宽度）
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = [
+        'width:' + LONG_IMAGE_WIDTH + 'px',
+        'background:#ffffff',
+        'font-family:' + ${JSON.stringify(STYLES.FONTS.PREVIEW)},
+        'color:#333',
+        'overflow:hidden',
+      ].join(';');
+      offscreen.appendChild(wrapper);
+
+      // 头部区域
+      const header = document.createElement('div');
+      header.style.cssText = [
+        'padding:' + LONG_IMAGE_HEADER_PADDING + 'px ' + LONG_IMAGE_PADDING + 'px',
+        'border-bottom:1px solid #e8e8e8',
+      ].join(';');
+      header.innerHTML = '<div style="font-size:20px;font-weight:700;color:#2c3e50;margin-bottom:6px;line-height:1.4;word-break:break-word;">'
+        + title.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        + '</div>'
+        + '<div style="font-size:12px;color:#999;">' + formatDate() + '</div>';
+      wrapper.appendChild(header);
+
+      // 正文区域 — 克隆预览内容（排除 swatch 按钮等 UI 元素）
+      const body = document.createElement('div');
+      body.className = 'markdown-body';
+      body.style.cssText = [
+        'padding:' + LONG_IMAGE_PADDING + 'px',
+        'background:#ffffff',
+        'box-shadow:none',
+        'border-radius:0',
+        'width:100%',
+        'box-sizing:border-box',
+      ].join(';');
+      body.innerHTML = contentArea.innerHTML;
+      // 移除克隆中的 UI 按钮（如 table-copy-btn、color-swatch-btn）
+      body.querySelectorAll('.table-copy-btn, .color-swatch-btn').forEach(el => el.remove());
+      wrapper.appendChild(body);
+
+      // 底部水印
+      const footer = document.createElement('div');
+      footer.style.cssText = [
+        'padding:' + LONG_IMAGE_FOOTER_PADDING + 'px ' + LONG_IMAGE_PADDING + 'px',
+        'text-align:center',
+        'font-size:11px',
+        'color:#bbb',
+        'border-top:1px solid #e8e8e8',
+      ].join(';');
+      footer.textContent = LONG_IMAGE_WATERMARK;
+      wrapper.appendChild(footer);
+
+      // 等待图片加载
+      const imgs = wrapper.querySelectorAll('img');
+      if (imgs.length > 0) {
+        await Promise.allSettled(
+          Array.from(imgs).map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => {
+              img.onload = resolve;
+              img.onerror = resolve;
+            });
+          })
+        );
+      }
+
+      longImageBtn.textContent = LONG_IMAGE_UI.GENERATING;
+
+      // html2canvas 截图
+      const canvas = await html2canvas(wrapper, {
+        scale: LONG_IMAGE_SCALE,
+        useCORS: true,
+        logging: false,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        width: LONG_IMAGE_WIDTH,
+        windowWidth: LONG_IMAGE_WIDTH,
+      });
+
+      // 清理离屏容器
+      document.body.removeChild(offscreen);
+
+      // 导出 PNG 并下载
+      canvas.toBlob(function(blob) {
+        if (!blob) {
+          showErrorToast('图片生成失败');
+          enableAllButtons();
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = LONG_IMAGE_FILENAME_PREFIX + '-' + generateTimestamp() + '.png';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
+        enableAllButtons();
+      }, 'image/png');
+
+    } catch (err) {
+      console.error('长图导出失败:', err);
+      showErrorToast('导出长图时出错: ' + (err.message || err));
+      enableAllButtons();
+    }
+  });
+}
 `;
 
 // =============================================================================
@@ -745,6 +933,7 @@ export function generatePreviewHtml(htmlContent: string): string {
     <button id="download-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.PAGED}</button>
     <button id="download-single-page-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.SINGLE}</button>
     <button id="copy-preview-btn" class="pdf-btn">${UI_TEXT.COPY_BUTTONS.COPY}</button>
+    <button id="export-long-image-btn" class="pdf-btn">${UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT}</button>
   </div>
   <div class="container">
     <article class="markdown-body" id="preview-content-area">

@@ -6,7 +6,7 @@
 // =============================================================================
 // 版本信息
 // =============================================================================
-export const VERSION = '2.5.1';
+export const VERSION = '2.6.0';
 
 // =============================================================================
 // A4 尺寸常量
@@ -58,6 +58,12 @@ export const UI_TEXT = {
     COPYING: '正在复制...',
     COPIED: '已复制',
   },
+  /** 长图按钮文案 */
+  LONG_IMAGE_BUTTONS: {
+    DEFAULT: '导出长图',
+    RENDERING: '正在渲染...',
+    GENERATING: '正在生成图片...',
+  },
   /** 错误提示 */
   ERRORS: {
     EMPTY_CONTENT: '编辑器内容为空，无法下载。',
@@ -90,6 +96,8 @@ export const STYLES = {
     PDF_BUTTON_SINGLE_HOVER: '#0056b3',
     COPY_BUTTON: '#6f42c1',
     COPY_BUTTON_HOVER: '#5a32a3',
+    LONG_IMAGE_BUTTON: '#fd7e14',
+    LONG_IMAGE_BUTTON_HOVER: '#e06b09',
   },
   /** 字体 */
   FONTS: {
@@ -127,6 +135,26 @@ export const CDN_RESOURCES = {
   /** GitHub Markdown CSS */
   GITHUB_MARKDOWN_CSS:
     'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/github-markdown-light.min.css',
+} as const;
+
+// =============================================================================
+// 长图导出配置
+// =============================================================================
+export const LONG_IMAGE = {
+  /** 模拟手机宽度 (px) — iPhone 14/15 标准 */
+  WIDTH_PX: 390,
+  /** 渲染缩放比例 */
+  SCALE: 2,
+  /** 内容内边距 (px) */
+  PADDING: 24,
+  /** 头部标题区域内边距 (px) */
+  HEADER_PADDING: 24,
+  /** 底部水印区域内边距 (px) */
+  FOOTER_PADDING: 16,
+  /** 水印文案 */
+  WATERMARK_TEXT: 'Made with Markdown Editor',
+  /** 文件名前缀 */
+  FILENAME_PREFIX: 'markdown-long-image',
 } as const;
 
 // =============================================================================

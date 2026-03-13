@@ -5,6 +5,18 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [2.6.0] - 2026-03-13
+
+### 新增
+
+- **手机版长图导出**：在预览页面新增"导出长图"按钮（橙色）
+  - 模拟 iPhone 14/15 标准宽度（390px）渲染
+  - 自动提取文档标题和日期生成头部区域
+  - 底部添加 "Made with Markdown Editor" 水印
+  - 2x Retina 缩放导出为高清 PNG
+  - 自动清除长图中的 UI 交互元素（表格复制按钮、颜色 swatch）
+  - 适合微信、微博等社交媒体分享
+
 ## [2.5.1] - 2026-02-17
 
 ### 修复
