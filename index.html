@@ -12,12 +12,28 @@
             <button id="preview-new-tab-btn" class="control-btn">预览</button>
             <button id="download-markdown-btn" class="control-btn">下载</button>
         </div>
-        <div class="editor-container single-pane">
-            <div class="editor-wrapper full-width">
+        <div class="editor-container single-pane" id="editor-container">
+            <div class="editor-wrapper full-width" id="editor-pane">
                 <div class="editor-content">
                     <textarea id="markdown-input" placeholder="在这里输入 Markdown 内容..."></textarea>
                 </div>
             </div>
+            <div class="preview-pane" id="preview-pane" hidden>
+                <button id="preview-close-btn" class="preview-close-float" type="button" title="关闭预览" aria-label="关闭预览">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+                <iframe id="preview-iframe" class="preview-iframe" title="Markdown 预览"></iframe>
+            </div>
+        </div>
+        <div class="split-actions" id="split-actions" hidden>
+            <button class="split-action-btn" id="action-paged-pdf" type="button">下载 PDF（分页）</button>
+            <button class="split-action-btn" id="action-single-pdf" type="button">保存 PDF（单页）</button>
+            <button class="split-action-btn" id="action-copy" type="button">复制预览</button>
+            <button class="split-action-btn" id="action-long-image" type="button">导出长图</button>
+            <button class="split-action-btn" id="action-new-tab" type="button">在新页面预览</button>
         </div>
     </div>
     <footer class="app-footer">

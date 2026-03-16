@@ -23,7 +23,16 @@ body {
   right: 20px;
   z-index: 1000;
   display: flex;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* When embedded in iframe (split-pane), hide controls and reduce padding */
+.embedded .preview-controls {
+  display: none;
+}
+
+.embedded .container {
+  padding-top: 20px;
 }
 
 .preview-toast-container {
@@ -47,20 +56,28 @@ body {
 }
 
 .pdf-btn {
-  background: transparent;
+  background: #ffffff;
   border: 1px solid #d2d2d2;
   color: #5c3e2e;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   font-family: inherit;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
 }
 
 .pdf-btn:hover:not(:disabled) {
-  background-color: rgba(92, 62, 46, 0.08);
+  background-color: #f8f5f3;
   border-color: #5c3e2e;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-btn:focus-visible {
+  outline: 2px solid #5c3e2e;
+  outline-offset: 1px;
 }
 
 .pdf-btn:disabled {
@@ -730,6 +747,10 @@ if (copyBtn) {
 wrapTablesWithCopyButton();
 enhanceColorCodes();
 
+// Expose for incremental updates from parent
+window.wrapTablesWithCopyButton = wrapTablesWithCopyButton;
+window.enhanceColorCodes = enhanceColorCodes;
+
 // 预加载库
 ensureLibs().catch(() => {});
 
@@ -921,9 +942,11 @@ if (longImageBtn) {
 /**
  * 生成预览页面 HTML
  * @param htmlContent 渲染后的 HTML 内容
+ * @param embedded 是否嵌入 iframe（隐藏控件，减少 padding）
  * @returns 完整的预览页面 HTML
  */
-export function generatePreviewHtml(htmlContent: string): string {
+export function generatePreviewHtml(htmlContent: string, embedded = false): string {
+  const bodyClass = embedded ? ' class="embedded"' : '';
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -933,7 +956,7 @@ export function generatePreviewHtml(htmlContent: string): string {
   <link rel="stylesheet" href="${CDN_RESOURCES.GITHUB_MARKDOWN_CSS}">
   <style>${previewStyles}</style>
 </head>
-<body>
+<body${bodyClass}>
   <div class="preview-controls">
     <button id="download-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.PAGED}</button>
     <button id="download-single-page-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.SINGLE}</button>

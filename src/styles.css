@@ -46,6 +46,11 @@ h1 {
     width: 100%;
     max-width: 800px;
     gap: 15px;
+    transition: max-width 0.3s ease;
+}
+
+.container.split-active .control-panel {
+    max-width: 1400px;
 }
 
 .control-btn {
@@ -63,9 +68,19 @@ h1 {
     transform: translateY(-2px);
 }
 
+.control-btn:focus-visible {
+    outline: 2px solid #5c3e2e;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 .control-btn:active {
     transform: translateY(1px);
     box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.editor-container {
+    transition: max-width 0.3s ease;
 }
 
 .editor-container.single-pane {
@@ -79,6 +94,30 @@ h1 {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+.editor-container.split-pane {
+    display: flex;
+    overflow: hidden;
+    width: 100%;
+    max-width: 1400px;
+    max-height: 85vh;
+    height: 80vh;
+    margin: 0 auto;
+    gap: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    aspect-ratio: auto;
+}
+
+
+.editor-container.split-pane .editor-wrapper {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 8px 0 0 8px;
+}
+
 .editor-wrapper.full-width {
     flex: 1;
     display: flex;
@@ -86,6 +125,115 @@ h1 {
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+}
+
+/* Preview pane */
+.preview-pane {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-left: 1px solid #e5e5e5;
+    border-radius: 0 8px 8px 0;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+}
+
+@keyframes preview-pulse {
+    0%   { border-left-color: #5c3e2e; }
+    100% { border-left-color: #e5e5e5; }
+}
+
+.preview-pane.updated {
+    animation: preview-pulse 0.6s ease-out;
+}
+
+.preview-pane[hidden] {
+    display: none;
+}
+
+/* Floating close button */
+.preview-close-float {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #888;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+    backdrop-filter: blur(4px);
+}
+
+.preview-close-float:hover {
+    background: #fff;
+    color: #5c3e2e;
+    border-color: #5c3e2e;
+}
+
+.preview-close-float:focus-visible {
+    outline: 2px solid #5c3e2e;
+    outline-offset: 1px;
+}
+
+.preview-iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+}
+
+/* Split-mode action bar */
+.split-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 10px auto 0;
+    padding: 0 2px;
+}
+
+.split-actions[hidden] {
+    display: none;
+}
+
+.split-action-btn {
+    background: #ffffff;
+    border: 1px solid #d2d2d2;
+    color: #5c3e2e;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'Times New Roman', Times, serif;
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+}
+
+.split-action-btn:hover:not(:disabled) {
+    background-color: #f8f5f3;
+    border-color: #5c3e2e;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.split-action-btn:focus-visible {
+    outline: 2px solid #5c3e2e;
+    outline-offset: 1px;
+}
+
+.split-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .editor-content {
@@ -142,6 +290,11 @@ h1 {
     color: #2c3e50;
     background-color: rgba(44, 62, 80, 0.08);
     transform: translateY(-1px);
+}
+
+.footer-link:focus-visible {
+    outline: 2px solid #5c3e2e;
+    outline-offset: 2px;
 }
 
 .history-overlay {
@@ -406,6 +559,27 @@ h1 {
     }
 
     .editor-container.single-pane {
+        max-width: 95%;
+    }
+
+    .editor-container.split-pane {
+        flex-direction: column;
+        max-width: 95%;
+        height: 85vh;
+    }
+
+    .editor-container.split-pane .editor-wrapper {
+        border-radius: 8px 8px 0 0;
+    }
+
+    .preview-pane {
+        border-left: none;
+        border-top: 1px solid #e5e5e5;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .split-actions {
+        flex-wrap: wrap;
         max-width: 95%;
     }
 }

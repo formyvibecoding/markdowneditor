@@ -1,6 +1,6 @@
 /**
  * Markdown 编辑器主入口
- * @version 2.5.1
+ * @version 2.8.0
  */
 
 import { marked } from 'marked';
@@ -91,10 +91,14 @@ function downloadMarkdown(textarea: HTMLTextAreaElement): void {
   downloadFile(blob, filename);
 }
 
-function openPreviewInNewTab(textarea: HTMLTextAreaElement): void {
+function renderMarkdownToHtml(textarea: HTMLTextAreaElement): string {
   const markdownText = textarea.value;
   const rawHtml = marked.parse(markdownText) as string;
-  const safeHtml = sanitizeHtml(rawHtml);
+  return sanitizeHtml(rawHtml);
+}
+
+function openPreviewInNewTab(textarea: HTMLTextAreaElement): void {
+  const safeHtml = renderMarkdownToHtml(textarea);
   const previewHtml = generatePreviewHtml(safeHtml);
   const previewWindow = window.open('', '_blank');
 
@@ -106,6 +110,184 @@ function openPreviewInNewTab(textarea: HTMLTextAreaElement): void {
   } else {
     showErrorToast(UI_TEXT.ERRORS.POPUP_BLOCKED);
   }
+}
+
+function writeToPreviewIframe(iframe: HTMLIFrameElement, html: string): void {
+  const doc = iframe.contentDocument;
+  if (!doc) return;
+  doc.open();
+  doc.write(html);
+  doc.close();
+}
+
+function updatePreviewContent(iframe: HTMLIFrameElement, textarea: HTMLTextAreaElement): void {
+  const doc = iframe.contentDocument;
+  if (!doc) return;
+
+  const contentArea = doc.getElementById('preview-content-area');
+  if (!contentArea) return;
+
+  contentArea.innerHTML = renderMarkdownToHtml(textarea);
+
+  // Re-run enhancements (table copy buttons, color swatches)
+  const win = iframe.contentWindow as Window & { wrapTablesWithCopyButton?: () => void; enhanceColorCodes?: () => void };
+  if (win.wrapTablesWithCopyButton) win.wrapTablesWithCopyButton();
+  if (win.enhanceColorCodes) win.enhanceColorCodes();
+}
+
+function setupScrollSync(
+  textarea: HTMLTextAreaElement,
+  iframe: HTMLIFrameElement,
+): { enable: () => void; disable: () => void } {
+  let syncing = false;
+
+  const onEditorScroll = (): void => {
+    if (syncing) return;
+    syncing = true;
+    const doc = iframe.contentDocument;
+    const scrollEl = doc?.scrollingElement ?? doc?.documentElement;
+    if (scrollEl) {
+      const maxEditor = textarea.scrollHeight - textarea.clientHeight;
+      const pct = maxEditor > 0 ? textarea.scrollTop / maxEditor : 0;
+      const maxPreview = scrollEl.scrollHeight - scrollEl.clientHeight;
+      scrollEl.scrollTop = pct * maxPreview;
+    }
+    requestAnimationFrame(() => { syncing = false; });
+  };
+
+  const onPreviewScroll = (): void => {
+    if (syncing) return;
+    syncing = true;
+    const doc = iframe.contentDocument;
+    const scrollEl = doc?.scrollingElement ?? doc?.documentElement;
+    if (scrollEl) {
+      const maxPreview = scrollEl.scrollHeight - scrollEl.clientHeight;
+      const pct = maxPreview > 0 ? scrollEl.scrollTop / maxPreview : 0;
+      const maxEditor = textarea.scrollHeight - textarea.clientHeight;
+      textarea.scrollTop = pct * maxEditor;
+    }
+    requestAnimationFrame(() => { syncing = false; });
+  };
+
+  let iframeCleanup: (() => void) | null = null;
+
+  const attachIframeListener = (): void => {
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    doc.addEventListener('scroll', onPreviewScroll);
+    iframeCleanup = () => doc.removeEventListener('scroll', onPreviewScroll);
+  };
+
+  return {
+    enable: () => {
+      textarea.addEventListener('scroll', onEditorScroll);
+      attachIframeListener();
+    },
+    disable: () => {
+      textarea.removeEventListener('scroll', onEditorScroll);
+      if (iframeCleanup) {
+        iframeCleanup();
+        iframeCleanup = null;
+      }
+    },
+  };
+}
+
+function initSplitPreview(
+  textarea: HTMLTextAreaElement,
+  container: HTMLElement,
+  editorPane: HTMLElement,
+  previewPane: HTMLElement,
+  previewIframe: HTMLIFrameElement,
+  previewBtn: HTMLButtonElement,
+  splitActions: HTMLElement,
+): { toggle: () => void; openInNewTab: () => void; clickIframeBtn: (id: string) => void } {
+  let isOpen = false;
+  let initialized = false;
+  let scrollSync: ReturnType<typeof setupScrollSync> | null = null;
+
+  const fullRender = (): void => {
+    const safeHtml = renderMarkdownToHtml(textarea);
+    const html = generatePreviewHtml(safeHtml, true);
+    writeToPreviewIframe(previewIframe, html);
+    initialized = true;
+    // Re-attach scroll sync after full rewrite
+    if (scrollSync) {
+      scrollSync.disable();
+      // Wait for iframe content to be ready
+      setTimeout(() => scrollSync?.enable(), 100);
+    }
+  };
+
+  const flashUpdate = (): void => {
+    previewPane.classList.remove('updated');
+    // Force reflow to restart animation
+    void previewPane.offsetWidth;
+    previewPane.classList.add('updated');
+  };
+
+  const incrementalUpdate = (): void => {
+    if (!isOpen) return;
+    if (!initialized) {
+      fullRender();
+      return;
+    }
+    updatePreviewContent(previewIframe, textarea);
+    flashUpdate();
+  };
+
+  const debouncedUpdate = debounce(incrementalUpdate, 300);
+
+  const open = (): void => {
+    isOpen = true;
+    container.classList.remove('single-pane');
+    container.classList.add('split-pane');
+    container.parentElement?.classList.add('split-active');
+    editorPane.classList.remove('full-width');
+    previewPane.hidden = false;
+    splitActions.hidden = false;
+    previewBtn.textContent = '编辑';
+    fullRender();
+    textarea.addEventListener('input', debouncedUpdate);
+    scrollSync = setupScrollSync(textarea, previewIframe);
+    setTimeout(() => scrollSync?.enable(), 150);
+  };
+
+  const close = (): void => {
+    isOpen = false;
+    initialized = false;
+    container.classList.remove('split-pane');
+    container.classList.add('single-pane');
+    container.parentElement?.classList.remove('split-active');
+    editorPane.classList.add('full-width');
+    previewPane.hidden = true;
+    splitActions.hidden = true;
+    previewBtn.textContent = '预览';
+    textarea.removeEventListener('input', debouncedUpdate);
+    if (scrollSync) {
+      scrollSync.disable();
+      scrollSync = null;
+    }
+  };
+
+  const toggle = (): void => {
+    if (isOpen) {
+      close();
+    } else {
+      open();
+    }
+  };
+
+  const openInNewTab = (): void => {
+    openPreviewInNewTab(textarea);
+  };
+
+  const clickIframeBtn = (id: string): void => {
+    const btn = previewIframe.contentDocument?.getElementById(id) as HTMLButtonElement | null;
+    if (btn) btn.click();
+  };
+
+  return { toggle, openInNewTab, clickIframeBtn };
 }
 
 function getHistoryPreview(content: string): string {
@@ -275,15 +457,59 @@ function initApp(): void {
   const markdownInput = requireElement<HTMLTextAreaElement>('markdown-input');
   const previewBtn = requireElement<HTMLButtonElement>('preview-new-tab-btn');
   const downloadBtn = requireElement<HTMLButtonElement>('download-markdown-btn');
+  const editorContainer = requireElement<HTMLDivElement>('editor-container');
+  const editorPane = requireElement<HTMLDivElement>('editor-pane');
+  const previewPane = requireElement<HTMLDivElement>('preview-pane');
+  const previewIframe = requireElement<HTMLIFrameElement>('preview-iframe');
+  const previewCloseBtn = requireElement<HTMLButtonElement>('preview-close-btn');
+  const splitActions = requireElement<HTMLDivElement>('split-actions');
+
+  // Action bar buttons
+  const actionPagedPdf = requireElement<HTMLButtonElement>('action-paged-pdf');
+  const actionSinglePdf = requireElement<HTMLButtonElement>('action-single-pdf');
+  const actionCopy = requireElement<HTMLButtonElement>('action-copy');
+  const actionLongImage = requireElement<HTMLButtonElement>('action-long-image');
+  const actionNewTab = requireElement<HTMLButtonElement>('action-new-tab');
 
   markdownInput.value = '';
+
+  const splitPreview = initSplitPreview(
+    markdownInput,
+    editorContainer,
+    editorPane,
+    previewPane,
+    previewIframe,
+    previewBtn,
+    splitActions,
+  );
 
   downloadBtn.addEventListener('click', () => {
     downloadMarkdown(markdownInput);
   });
 
   previewBtn.addEventListener('click', () => {
-    openPreviewInNewTab(markdownInput);
+    splitPreview.toggle();
+  });
+
+  previewCloseBtn.addEventListener('click', () => {
+    splitPreview.toggle();
+  });
+
+  // Action bar: delegate to iframe buttons
+  actionPagedPdf.addEventListener('click', () => {
+    splitPreview.clickIframeBtn('download-pdf-btn');
+  });
+  actionSinglePdf.addEventListener('click', () => {
+    splitPreview.clickIframeBtn('download-single-page-pdf-btn');
+  });
+  actionCopy.addEventListener('click', () => {
+    splitPreview.clickIframeBtn('copy-preview-btn');
+  });
+  actionLongImage.addEventListener('click', () => {
+    splitPreview.clickIframeBtn('export-long-image-btn');
+  });
+  actionNewTab.addEventListener('click', () => {
+    splitPreview.openInNewTab();
   });
 
   setupKeyboardShortcuts(() => {

@@ -27,3 +27,7 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Minified files
+*.min.js
+*.min.css
