@@ -135,7 +135,7 @@ export const LONG_IMAGE = {
   /** 模拟手机宽度 (px) — iPhone 14/15 标准 */
   WIDTH_PX: 390,
   /** 渲染缩放比例 */
-  SCALE: 2,
+  SCALE: 3,
   /** 内容内边距 (px) */
   PADDING: 24,
   /** 头部标题区域内边距 (px) */
