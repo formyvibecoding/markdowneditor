@@ -25,7 +25,15 @@ import {
   saveHistoryEntry,
   type HistoryEntry,
 } from './history';
-import { showConfirm, showErrorToast } from './feedback';
+import { showConfirm, showErrorToast, showToast } from './feedback';
+
+const SPLIT_PREVIEW_MIN_VIEWPORT = 1280;
+const PREVIEW_FOCUS_MIN_VIEWPORT = 1680;
+const MOTION_LAYOUT_DURATION = 420;
+const MOTION_ENTER_DURATION = 320;
+const MOTION_EXIT_DURATION = 220;
+const MOTION_LAYOUT_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const MOTION_EXIT_EASING = 'cubic-bezier(0.25, 1, 0.5, 1)';
 
 function setupErrorBoundary(): void {
   window.onerror = (message, source, lineno, colno, error): boolean => {
@@ -77,6 +85,172 @@ function setupKeyboardShortcuts(downloadFn: () => void): void {
   });
 }
 
+function canUseSplitPreview(): boolean {
+  return window.innerWidth >= SPLIT_PREVIEW_MIN_VIEWPORT;
+}
+
+function canUsePreviewFocusLayout(): boolean {
+  return window.innerWidth >= PREVIEW_FOCUS_MIN_VIEWPORT;
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function waitForNextFrame(): Promise<void> {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+function isRenderableElement(element: HTMLElement): boolean {
+  return element.isConnected && !element.hidden && element.getClientRects().length > 0;
+}
+
+function snapshotRects(elements: Array<HTMLElement | null | undefined>): Map<HTMLElement, DOMRect> {
+  const rects = new Map<HTMLElement, DOMRect>();
+
+  elements.forEach(element => {
+    if (!element || !isRenderableElement(element)) {
+      return;
+    }
+    rects.set(element, element.getBoundingClientRect());
+  });
+
+  return rects;
+}
+
+function cancelAnimations(elements: Array<HTMLElement | null | undefined>): void {
+  elements.forEach(element => {
+    element?.getAnimations().forEach(animation => animation.cancel());
+  });
+}
+
+function animateFromRect(
+  element: HTMLElement,
+  firstRect: DOMRect,
+  options: { duration?: number; delay?: number; opacity?: [number, number] } = {},
+): Animation | null {
+  if (!isRenderableElement(element)) {
+    return null;
+  }
+
+  const {
+    duration = MOTION_LAYOUT_DURATION,
+    delay = 0,
+    opacity = [1, 1],
+  } = options;
+
+  const lastRect = element.getBoundingClientRect();
+  const deltaX = firstRect.left - lastRect.left;
+  const deltaY = firstRect.top - lastRect.top;
+  const scaleX = firstRect.width > 0 ? firstRect.width / Math.max(lastRect.width, 1) : 1;
+  const scaleY = firstRect.height > 0 ? firstRect.height / Math.max(lastRect.height, 1) : 1;
+
+  if (
+    Math.abs(deltaX) < 1
+    && Math.abs(deltaY) < 1
+    && Math.abs(scaleX - 1) < 0.01
+    && Math.abs(scaleY - 1) < 0.01
+    && opacity[0] === opacity[1]
+  ) {
+    return null;
+  }
+
+  return element.animate(
+    [
+      {
+        transformOrigin: 'top left',
+        transform: `translate(${deltaX}px, ${deltaY}px) scale(${scaleX}, ${scaleY})`,
+        opacity: opacity[0],
+      },
+      {
+        transformOrigin: 'top left',
+        transform: 'translate(0, 0) scale(1, 1)',
+        opacity: opacity[1],
+      },
+    ],
+    {
+      duration,
+      delay,
+      easing: MOTION_LAYOUT_EASING,
+      fill: 'both',
+    },
+  );
+}
+
+function animateEntrance(
+  element: HTMLElement,
+  options: { fromX?: number; fromY?: number; fromScale?: number; delay?: number; duration?: number } = {},
+): Animation | null {
+  if (!isRenderableElement(element)) {
+    return null;
+  }
+
+  const {
+    fromX = 0,
+    fromY = 0,
+    fromScale = 0.98,
+    delay = 0,
+    duration = MOTION_ENTER_DURATION,
+  } = options;
+
+  return element.animate(
+    [
+      {
+        transform: `translate(${fromX}px, ${fromY}px) scale(${fromScale})`,
+        opacity: 0,
+      },
+      {
+        transform: 'translate(0, 0) scale(1)',
+        opacity: 1,
+      },
+    ],
+    {
+      duration,
+      delay,
+      easing: MOTION_LAYOUT_EASING,
+      fill: 'both',
+    },
+  );
+}
+
+function animateExit(
+  element: HTMLElement,
+  options: { toX?: number; toY?: number; toScale?: number; duration?: number } = {},
+): Promise<void> {
+  if (!isRenderableElement(element)) {
+    return Promise.resolve();
+  }
+
+  const {
+    toX = 0,
+    toY = 0,
+    toScale = 0.98,
+    duration = MOTION_EXIT_DURATION,
+  } = options;
+
+  const animation = element.animate(
+    [
+      {
+        transform: 'translate(0, 0) scale(1)',
+        opacity: 1,
+      },
+      {
+        transform: `translate(${toX}px, ${toY}px) scale(${toScale})`,
+        opacity: 0,
+      },
+    ],
+    {
+      duration,
+      easing: MOTION_EXIT_EASING,
+      fill: 'both',
+    },
+  );
+
+  return animation.finished.then(() => undefined).catch(() => undefined);
+}
+
 function downloadMarkdown(textarea: HTMLTextAreaElement): void {
   const content = textarea.value;
 
@@ -97,7 +271,7 @@ function renderMarkdownToHtml(textarea: HTMLTextAreaElement): string {
   return sanitizeHtml(rawHtml);
 }
 
-function openPreviewInNewTab(textarea: HTMLTextAreaElement): void {
+function openPreviewInNewTab(textarea: HTMLTextAreaElement): boolean {
   const safeHtml = renderMarkdownToHtml(textarea);
   const previewHtml = generatePreviewHtml(safeHtml);
   const previewWindow = window.open('', '_blank');
@@ -107,9 +281,11 @@ function openPreviewInNewTab(textarea: HTMLTextAreaElement): void {
     previewWindow.document.write(previewHtml);
     previewWindow.document.close();
     previewWindow.focus();
-  } else {
-    showErrorToast(UI_TEXT.ERRORS.POPUP_BLOCKED);
+    return true;
   }
+
+  showErrorToast(UI_TEXT.ERRORS.POPUP_BLOCKED);
+  return false;
 }
 
 function writeToPreviewIframe(iframe: HTMLIFrameElement, html: string): void {
@@ -129,9 +305,14 @@ function updatePreviewContent(iframe: HTMLIFrameElement, textarea: HTMLTextAreaE
 
   contentArea.innerHTML = renderMarkdownToHtml(textarea);
 
-  // Re-run enhancements (table copy buttons, color swatches)
-  const win = iframe.contentWindow as Window & { wrapTablesWithCopyButton?: () => void; enhanceColorCodes?: () => void };
+  // Re-run enhancements (copy buttons, color swatches)
+  const win = iframe.contentWindow as Window & {
+    wrapTablesWithCopyButton?: () => void;
+    wrapCodeBlocksWithCopyButton?: () => void;
+    enhanceColorCodes?: () => void;
+  };
   if (win.wrapTablesWithCopyButton) win.wrapTablesWithCopyButton();
+  if (win.wrapCodeBlocksWithCopyButton) win.wrapCodeBlocksWithCopyButton();
   if (win.enhanceColorCodes) win.enhanceColorCodes();
 }
 
@@ -193,6 +374,8 @@ function setupScrollSync(
   };
 }
 
+type SplitLayoutMode = 'balanced' | 'preview-focus';
+
 function initSplitPreview(
   textarea: HTMLTextAreaElement,
   container: HTMLElement,
@@ -201,10 +384,56 @@ function initSplitPreview(
   previewIframe: HTMLIFrameElement,
   previewBtn: HTMLButtonElement,
   splitActions: HTMLElement,
-): { toggle: () => void; openInNewTab: () => void; clickIframeBtn: (id: string) => void } {
+): {
+  toggle: () => void;
+  openInNewTab: () => boolean;
+  clickIframeBtn: (id: string) => void;
+  setLayoutMode: (mode: SplitLayoutMode) => void;
+  setSystemLayoutMode: (mode: SplitLayoutMode) => void;
+  getLayoutMode: () => SplitLayoutMode;
+  close: () => void;
+  isOpen: () => boolean;
+} {
   let isOpen = false;
   let initialized = false;
+  let isTransitioning = false;
   let scrollSync: ReturnType<typeof setupScrollSync> | null = null;
+  let resizeCleanup: (() => void) | null = null;
+  let layoutMode: SplitLayoutMode = canUsePreviewFocusLayout() ? 'preview-focus' : 'balanced';
+  let balancedEditorWidth = 700;
+  let hasExplicitLayoutPreference = false;
+
+  const parentContainer = container.parentElement;
+  const controlPanel = parentContainer?.querySelector<HTMLElement>('.control-panel') ?? null;
+
+  const applyLayoutMetrics = (): void => {
+    const shellWidth = Math.round(
+      layoutMode === 'preview-focus'
+        ? balancedEditorWidth * 3
+        : balancedEditorWidth * 2,
+    );
+
+    container.dataset.splitLayout = layoutMode;
+    parentContainer?.style.setProperty('--split-shell-width', `${shellWidth}px`);
+    parentContainer?.setAttribute('data-split-layout', layoutMode);
+  };
+
+  const captureBalancedWidth = (): void => {
+    const nextWidth = Math.round(editorPane.getBoundingClientRect().width);
+    if (nextWidth > 0) {
+      balancedEditorWidth = nextWidth;
+    }
+  };
+
+  const refreshLayoutMetrics = (measureBalanced = false): void => {
+    requestAnimationFrame(() => {
+      if (!isOpen) return;
+      if (measureBalanced && layoutMode === 'balanced') {
+        captureBalancedWidth();
+      }
+      applyLayoutMetrics();
+    });
+  };
 
   const fullRender = (): void => {
     const safeHtml = renderMarkdownToHtml(textarea);
@@ -238,27 +467,83 @@ function initSplitPreview(
 
   const debouncedUpdate = debounce(incrementalUpdate, 300);
 
+  const getAnimatedShellElements = (): HTMLElement[] => {
+    return [container, editorPane, previewPane, splitActions, controlPanel].filter(
+      (element): element is HTMLElement => Boolean(element),
+    );
+  };
+
+  const getSplitActionItems = (): HTMLElement[] => {
+    return Array.from(splitActions.children).filter(
+      (child): child is HTMLElement => child instanceof HTMLElement,
+    );
+  };
+
   const open = (): void => {
+    if (isTransitioning) return;
+    if (!hasExplicitLayoutPreference) {
+      layoutMode = canUsePreviewFocusLayout() ? 'preview-focus' : 'balanced';
+    }
+    captureBalancedWidth();
+    const beforeRects = snapshotRects([container, editorPane, controlPanel]);
+
     isOpen = true;
     container.classList.remove('single-pane');
     container.classList.add('split-pane');
-    container.parentElement?.classList.add('split-active');
+    parentContainer?.classList.add('split-active');
     editorPane.classList.remove('full-width');
     previewPane.hidden = false;
     splitActions.hidden = false;
     previewBtn.textContent = '编辑';
     fullRender();
+    applyLayoutMetrics();
     textarea.addEventListener('input', debouncedUpdate);
     scrollSync = setupScrollSync(textarea, previewIframe);
     setTimeout(() => scrollSync?.enable(), 150);
+    const onResize = (): void => {
+      if (isOpen) {
+        refreshLayoutMetrics(layoutMode === 'balanced');
+      }
+    };
+    window.addEventListener('resize', onResize);
+    resizeCleanup = () => window.removeEventListener('resize', onResize);
+
+    if (prefersReducedMotion()) {
+      refreshLayoutMetrics(true);
+      return;
+    }
+
+    isTransitioning = true;
+    void (async () => {
+      await waitForNextFrame();
+      cancelAnimations(getAnimatedShellElements());
+
+      const animations = [
+        animateFromRect(container, beforeRects.get(container) ?? container.getBoundingClientRect()),
+        animateFromRect(editorPane, beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()),
+      ];
+
+      if (controlPanel && beforeRects.has(controlPanel)) {
+        animations.push(animateFromRect(controlPanel, beforeRects.get(controlPanel)!));
+      }
+
+      animations.push(animateEntrance(previewPane, { fromX: 42, fromScale: 0.985, duration: 360 }));
+      animations.push(animateEntrance(splitActions, { fromY: 18, duration: 280 }));
+      getSplitActionItems().forEach((item, index) => {
+        animations.push(animateEntrance(item, { fromY: 12, duration: 260, delay: 60 + (index * 28) }));
+      });
+
+      await Promise.all(animations.filter(Boolean).map(animation => animation!.finished.catch(() => undefined)));
+      isTransitioning = false;
+    })();
   };
 
-  const close = (): void => {
+  const applyClosedState = (): void => {
     isOpen = false;
     initialized = false;
     container.classList.remove('split-pane');
     container.classList.add('single-pane');
-    container.parentElement?.classList.remove('split-active');
+    parentContainer?.classList.remove('split-active');
     editorPane.classList.add('full-width');
     previewPane.hidden = true;
     splitActions.hidden = true;
@@ -268,6 +553,93 @@ function initSplitPreview(
       scrollSync.disable();
       scrollSync = null;
     }
+    if (resizeCleanup) {
+      resizeCleanup();
+      resizeCleanup = null;
+    }
+  };
+
+  const close = (): void => {
+    if (isTransitioning) return;
+    if (prefersReducedMotion()) {
+      applyClosedState();
+      return;
+    }
+
+    isTransitioning = true;
+    const beforeRects = snapshotRects([container, editorPane, controlPanel]);
+    const exitingElements = [previewPane, splitActions, ...getSplitActionItems()];
+    cancelAnimations(exitingElements);
+
+    void (async () => {
+      await Promise.all([
+        animateExit(previewPane, { toX: 28, toScale: 0.985 }),
+        animateExit(splitActions, { toY: 14, toScale: 0.99 }),
+      ]);
+
+      applyClosedState();
+
+      await waitForNextFrame();
+      cancelAnimations([container, editorPane, controlPanel]);
+
+      const animations = [
+        animateFromRect(container, beforeRects.get(container) ?? container.getBoundingClientRect()),
+        animateFromRect(editorPane, beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()),
+      ];
+
+      if (controlPanel && beforeRects.has(controlPanel)) {
+        animations.push(animateFromRect(controlPanel, beforeRects.get(controlPanel)!));
+      }
+
+      await Promise.all(animations.filter(Boolean).map(animation => animation!.finished.catch(() => undefined)));
+      isTransitioning = false;
+    })();
+  };
+
+  const setLayoutMode = (mode: SplitLayoutMode, userInitiated = true): void => {
+    if (layoutMode === mode) return;
+    if (isTransitioning) return;
+
+    const beforeRects = snapshotRects([container, editorPane, previewPane, splitActions, controlPanel]);
+
+    layoutMode = mode;
+    if (userInitiated) {
+      hasExplicitLayoutPreference = true;
+    }
+
+    if (!isOpen) {
+      return;
+    }
+
+    applyLayoutMetrics();
+
+    if (prefersReducedMotion()) {
+      refreshLayoutMetrics(mode === 'balanced');
+      return;
+    }
+
+    isTransitioning = true;
+    void (async () => {
+      await waitForNextFrame();
+      cancelAnimations(getAnimatedShellElements());
+
+      const animations = [
+        animateFromRect(container, beforeRects.get(container) ?? container.getBoundingClientRect()),
+        animateFromRect(editorPane, beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()),
+        animateFromRect(previewPane, beforeRects.get(previewPane) ?? previewPane.getBoundingClientRect()),
+        animateFromRect(splitActions, beforeRects.get(splitActions) ?? splitActions.getBoundingClientRect(), {
+          opacity: [0.88, 1],
+          duration: 300,
+        }),
+      ];
+
+      if (controlPanel && beforeRects.has(controlPanel)) {
+        animations.push(animateFromRect(controlPanel, beforeRects.get(controlPanel)!));
+      }
+
+      await Promise.all(animations.filter(Boolean).map(animation => animation!.finished.catch(() => undefined)));
+      isTransitioning = false;
+    })();
   };
 
   const toggle = (): void => {
@@ -278,8 +650,8 @@ function initSplitPreview(
     }
   };
 
-  const openInNewTab = (): void => {
-    openPreviewInNewTab(textarea);
+  const openInNewTab = (): boolean => {
+    return openPreviewInNewTab(textarea);
   };
 
   const clickIframeBtn = (id: string): void => {
@@ -287,7 +659,16 @@ function initSplitPreview(
     if (btn) btn.click();
   };
 
-  return { toggle, openInNewTab, clickIframeBtn };
+  return {
+    toggle,
+    openInNewTab,
+    clickIframeBtn,
+    setLayoutMode: (mode: SplitLayoutMode) => setLayoutMode(mode, true),
+    setSystemLayoutMode: (mode: SplitLayoutMode) => setLayoutMode(mode, false),
+    getLayoutMode: () => layoutMode,
+    close,
+    isOpen: () => isOpen,
+  };
 }
 
 function getHistoryPreview(content: string): string {
@@ -461,7 +842,6 @@ function initApp(): void {
   const editorPane = requireElement<HTMLDivElement>('editor-pane');
   const previewPane = requireElement<HTMLDivElement>('preview-pane');
   const previewIframe = requireElement<HTMLIFrameElement>('preview-iframe');
-  const previewCloseBtn = requireElement<HTMLButtonElement>('preview-close-btn');
   const splitActions = requireElement<HTMLDivElement>('split-actions');
 
   // Action bar buttons
@@ -470,6 +850,8 @@ function initApp(): void {
   const actionCopy = requireElement<HTMLButtonElement>('action-copy');
   const actionLongImage = requireElement<HTMLButtonElement>('action-long-image');
   const actionNewTab = requireElement<HTMLButtonElement>('action-new-tab');
+  const splitViewBalancedBtn = requireElement<HTMLButtonElement>('split-view-balanced');
+  const splitViewPreviewFocusBtn = requireElement<HTMLButtonElement>('split-view-preview-focus');
 
   markdownInput.value = '';
 
@@ -483,15 +865,68 @@ function initApp(): void {
     splitActions,
   );
 
+  const setSplitViewButtonState = (mode: SplitLayoutMode): void => {
+    splitViewBalancedBtn.classList.toggle('is-active', mode === 'balanced');
+    splitViewBalancedBtn.setAttribute('aria-pressed', String(mode === 'balanced'));
+    splitViewPreviewFocusBtn.classList.toggle('is-active', mode === 'preview-focus');
+    splitViewPreviewFocusBtn.setAttribute('aria-pressed', String(mode === 'preview-focus'));
+  };
+
+  let lastCanUseSplitPreview = canUseSplitPreview();
+  let lastCanUsePreviewFocus = canUsePreviewFocusLayout();
+
+  const syncSplitPreviewAvailability = (announce = false): void => {
+    const splitAllowed = canUseSplitPreview();
+    const previewFocusAllowed = canUsePreviewFocusLayout();
+
+    previewBtn.title = splitAllowed
+      ? '打开分屏预览'
+      : `当前窗口较窄，将使用新窗口预览（至少 ${SPLIT_PREVIEW_MIN_VIEWPORT}px）`;
+
+    splitViewPreviewFocusBtn.disabled = !previewFocusAllowed;
+    splitViewPreviewFocusBtn.title = previewFocusAllowed
+      ? '保持编辑区不变，扩张预览区到两倍宽'
+      : `当前窗口宽度不足，至少 ${PREVIEW_FOCUS_MIN_VIEWPORT}px 可使用 1:2 视图`;
+
+    if (!splitAllowed && splitPreview.isOpen()) {
+      splitPreview.close();
+      setSplitViewButtonState('balanced');
+      if (announce && lastCanUseSplitPreview) {
+        showToast(`窗口宽度不足，已退出分屏预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px，请使用新窗口预览。`);
+      }
+    } else if (!previewFocusAllowed && splitPreview.getLayoutMode() === 'preview-focus') {
+      splitPreview.setSystemLayoutMode('balanced');
+      setSplitViewButtonState('balanced');
+      if (announce && lastCanUsePreviewFocus) {
+        showToast(`窗口宽度不足，已切回 1:1 视图。1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`);
+      }
+    }
+
+    lastCanUseSplitPreview = splitAllowed;
+    lastCanUsePreviewFocus = previewFocusAllowed;
+  };
+
+  setSplitViewButtonState(splitPreview.getLayoutMode());
+  syncSplitPreviewAvailability();
+
   downloadBtn.addEventListener('click', () => {
     downloadMarkdown(markdownInput);
   });
 
   previewBtn.addEventListener('click', () => {
-    splitPreview.toggle();
-  });
+    if (splitPreview.isOpen()) {
+      splitPreview.toggle();
+      return;
+    }
 
-  previewCloseBtn.addEventListener('click', () => {
+    if (!canUseSplitPreview()) {
+      const opened = splitPreview.openInNewTab();
+      if (opened) {
+        showToast(`当前窗口宽度不足，已改为新窗口预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px。`);
+      }
+      return;
+    }
+
     splitPreview.toggle();
   });
 
@@ -511,6 +946,24 @@ function initApp(): void {
   actionNewTab.addEventListener('click', () => {
     splitPreview.openInNewTab();
   });
+
+  splitViewBalancedBtn.addEventListener('click', () => {
+    splitPreview.setLayoutMode('balanced');
+    setSplitViewButtonState('balanced');
+  });
+
+  splitViewPreviewFocusBtn.addEventListener('click', () => {
+    if (!canUsePreviewFocusLayout()) {
+      showToast(`当前窗口宽度不足，1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`);
+      return;
+    }
+    splitPreview.setLayoutMode('preview-focus');
+    setSplitViewButtonState('preview-focus');
+  });
+
+  window.addEventListener('resize', debounce(() => {
+    syncSplitPreviewAvailability(true);
+  }, 120));
 
   setupKeyboardShortcuts(() => {
     downloadMarkdown(markdownInput);

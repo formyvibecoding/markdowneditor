@@ -26,19 +26,47 @@ function ensureToastContainer(): HTMLDivElement {
 }
 
 export function showToast(message: string, options: ToastOptions = {}): void {
-  const { type = 'info', durationMs = 2200 } = options;
+  const { type = 'info', durationMs = 4400 } = options;
   const container = ensureToastContainer();
   const toast = document.createElement('div');
   toast.className = `app-toast app-toast-${type}`;
-  toast.textContent = message;
+
+  const tone = document.createElement('span');
+  tone.className = 'app-toast-tone';
+  tone.textContent = type === 'error' ? '注意' : type === 'success' ? '完成' : '提示';
+
+  const text = document.createElement('p');
+  text.className = 'app-toast-message';
+  text.textContent = message;
+
+  const content = document.createElement('div');
+  content.className = 'app-toast-content';
+  content.appendChild(tone);
+  content.appendChild(text);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'app-toast-close';
+  closeBtn.setAttribute('aria-label', '关闭通知');
+  closeBtn.textContent = '×';
+
+  toast.appendChild(content);
+  toast.appendChild(closeBtn);
   container.appendChild(toast);
 
-  window.setTimeout(() => {
+  const removeToast = (): void => {
     toast.classList.add('app-toast-hide');
     window.setTimeout(() => {
       toast.remove();
     }, 180);
-  }, durationMs);
+  };
+
+  const timer = window.setTimeout(removeToast, durationMs);
+
+  closeBtn.addEventListener('click', () => {
+    window.clearTimeout(timer);
+    removeToast();
+  });
 }
 
 export function showErrorToast(message: string): void {

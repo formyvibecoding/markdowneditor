@@ -19,16 +19,26 @@
                 </div>
             </div>
             <div class="preview-pane" id="preview-pane" hidden>
-                <button id="preview-close-btn" class="preview-close-float" type="button" title="关闭预览" aria-label="关闭预览">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
                 <iframe id="preview-iframe" class="preview-iframe" title="Markdown 预览"></iframe>
             </div>
         </div>
         <div class="split-actions" id="split-actions" hidden>
+            <div class="split-view-modes" role="group" aria-label="预览视图比例">
+                <button class="split-view-btn is-active" id="split-view-balanced" type="button" aria-pressed="true" title="编辑区与预览区等宽">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3.5" y="5" width="6.5" height="14" rx="1.8"></rect>
+                        <rect x="14" y="5" width="6.5" height="14" rx="1.8"></rect>
+                    </svg>
+                    <span>1:1</span>
+                </button>
+                <button class="split-view-btn" id="split-view-preview-focus" type="button" aria-pressed="false" title="保持编辑区不变，扩张预览区到两倍宽">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3.5" y="5" width="4.5" height="14" rx="1.6"></rect>
+                        <rect x="11" y="5" width="9.5" height="14" rx="1.8"></rect>
+                    </svg>
+                    <span>1:2</span>
+                </button>
+            </div>
             <button class="split-action-btn" id="action-paged-pdf" type="button">下载 PDF（分页）</button>
             <button class="split-action-btn" id="action-single-pdf" type="button">保存 PDF（单页）</button>
             <button class="split-action-btn" id="action-copy" type="button">复制预览</button>

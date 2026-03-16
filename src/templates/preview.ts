@@ -11,6 +11,8 @@ import { CDN_RESOURCES, UI_TEXT, STYLES, A4, PDF_CONFIG, LONG_IMAGE } from '../c
 
 const previewStyles = `
 body {
+  --preview-page-max-width: 940px;
+  --preview-content-max-width: 900px;
   margin: 0;
   padding: 0;
   background-color: ${STYLES.COLORS.BACKGROUND};
@@ -19,11 +21,15 @@ body {
 
 .preview-controls {
   position: fixed;
-  top: 10px;
-  right: 20px;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
+  box-sizing: border-box;
+  width: min(calc(100% - 40px), var(--preview-content-max-width));
 }
 
 /* When embedded in iframe (split-pane), hide controls and reduce padding */
@@ -32,7 +38,14 @@ body {
 }
 
 .embedded .container {
+  width: 100%;
+  max-width: none;
   padding-top: 20px;
+}
+
+.embedded .markdown-body {
+  width: 90%;
+  max-width: none;
 }
 
 .preview-toast-container {
@@ -86,18 +99,20 @@ body {
 }
 
 .container {
-  max-width: 100%;
+  box-sizing: border-box;
+  width: min(100%, var(--preview-page-max-width));
   margin: 0 auto;
-  padding: 20px;
-  padding-top: 70px;
+  padding: 20px 20px 40px;
+  padding-top: 66px;
 }
 
 .markdown-body {
   box-sizing: border-box;
   background-color: ${STYLES.COLORS.WHITE};
-  padding: 30px;
+  padding: clamp(28px, 3vw, 36px);
   margin: 0 auto;
-  width: 90%;
+  width: 100%;
+  max-width: var(--preview-content-max-width);
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   font-family: ${STYLES.FONTS.PREVIEW};
@@ -108,6 +123,7 @@ body {
 @media print {
   .preview-controls,
   .table-copy-btn,
+  .code-copy-btn,
   .color-swatch-btn {
     display: none !important;
   }
@@ -156,7 +172,12 @@ body {
   max-width: 100%;
 }
 
-.markdown-body .table-with-copy .table-copy-btn {
+.markdown-body .code-block-with-copy {
+  position: relative;
+}
+
+.markdown-body .table-with-copy .table-copy-btn,
+.markdown-body .code-block-with-copy .code-copy-btn {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -174,13 +195,17 @@ body {
 }
 
 .markdown-body .table-with-copy:hover .table-copy-btn,
-.markdown-body .table-with-copy .table-copy-btn:focus-visible {
+.markdown-body .table-with-copy .table-copy-btn:focus-visible,
+.markdown-body .code-block-with-copy:hover .code-copy-btn,
+.markdown-body .code-block-with-copy .code-copy-btn:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
 
 .markdown-body .table-with-copy .table-copy-btn:hover,
-.markdown-body .table-with-copy .table-copy-btn:focus-visible {
+.markdown-body .table-with-copy .table-copy-btn:focus-visible,
+.markdown-body .code-block-with-copy .code-copy-btn:hover,
+.markdown-body .code-block-with-copy .code-copy-btn:focus-visible {
   background: rgba(33, 37, 41, 0.9);
 }
 
@@ -423,6 +448,58 @@ function wrapTablesWithCopyButton() {
   });
 }
 
+function wrapCodeBlocksWithCopyButton() {
+  if (!contentArea) return;
+  const blocks = contentArea.querySelectorAll('pre');
+
+  blocks.forEach((block) => {
+    if (block.closest('.code-block-with-copy')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block-with-copy';
+
+    const copyCodeButton = document.createElement('button');
+    copyCodeButton.className = 'code-copy-btn';
+    copyCodeButton.type = 'button';
+    copyCodeButton.textContent = '复制代码';
+    copyCodeButton.setAttribute('aria-label', '复制代码');
+
+    copyCodeButton.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const codeText = block.innerText;
+      let copied = false;
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(codeText);
+          copied = true;
+        }
+      } catch (err) {
+        copied = false;
+      }
+
+      if (!copied) {
+        showErrorToast(UI_TEXT.COPY_FAILED);
+        return;
+      }
+
+      const originalText = copyCodeButton.textContent;
+      copyCodeButton.textContent = '已复制';
+      copyCodeButton.disabled = true;
+      setTimeout(() => {
+        copyCodeButton.textContent = originalText || '复制代码';
+        copyCodeButton.disabled = false;
+      }, 1200);
+    });
+
+    block.parentNode?.insertBefore(wrapper, block);
+    wrapper.appendChild(block);
+    wrapper.appendChild(copyCodeButton);
+  });
+}
+
 function createColorSwatchButton(colorCode) {
   const button = document.createElement('button');
   button.className = 'color-swatch-btn';
@@ -538,6 +615,7 @@ function buildClipboardPayload(container) {
       cloneInput.removeAttribute('checked');
     }
   });
+  clone.querySelectorAll('.table-copy-btn, .code-copy-btn, .color-swatch-btn').forEach((el) => el.remove());
 
   return {
     html: clone.innerHTML,
@@ -745,10 +823,12 @@ if (copyBtn) {
 }
 
 wrapTablesWithCopyButton();
+wrapCodeBlocksWithCopyButton();
 enhanceColorCodes();
 
 // Expose for incremental updates from parent
 window.wrapTablesWithCopyButton = wrapTablesWithCopyButton;
+window.wrapCodeBlocksWithCopyButton = wrapCodeBlocksWithCopyButton;
 window.enhanceColorCodes = enhanceColorCodes;
 
 // 预加载库
@@ -847,7 +927,7 @@ if (longImageBtn) {
         + '<div style="font-size:12px;color:#999;">' + formatDate() + '</div>';
       wrapper.appendChild(header);
 
-      // 正文区域 — 克隆预览内容（排除 swatch 按钮等 UI 元素）
+      // 正文区域 — 克隆预览内容（排除额外 UI 元素）
       const body = document.createElement('div');
       body.className = 'markdown-body';
       body.style.cssText = [
@@ -859,8 +939,8 @@ if (longImageBtn) {
         'box-sizing:border-box',
       ].join(';');
       body.innerHTML = contentArea.innerHTML;
-      // 移除克隆中的 UI 按钮（如 table-copy-btn、color-swatch-btn）
-      body.querySelectorAll('.table-copy-btn, .color-swatch-btn').forEach(el => el.remove());
+      // 移除克隆中的 UI 按钮（如复制按钮、颜色按钮）
+      body.querySelectorAll('.table-copy-btn, .code-copy-btn, .color-swatch-btn').forEach(el => el.remove());
       wrapper.appendChild(body);
 
       // 底部水印

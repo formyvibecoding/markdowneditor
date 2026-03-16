@@ -23,6 +23,7 @@ body {
 }
 
 .container {
+    --split-shell-width: 1400px;
     max-width: 100%;
     flex: 1;
     margin: 0;
@@ -46,11 +47,10 @@ h1 {
     width: 100%;
     max-width: 800px;
     gap: 15px;
-    transition: max-width 0.3s ease;
 }
 
 .container.split-active .control-panel {
-    max-width: 1400px;
+    max-width: var(--split-shell-width);
 }
 
 .control-btn {
@@ -79,10 +79,6 @@ h1 {
     box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.editor-container {
-    transition: max-width 0.3s ease;
-}
-
 .editor-container.single-pane {
     display: flex;
     overflow: hidden;
@@ -95,10 +91,11 @@ h1 {
 }
 
 .editor-container.split-pane {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     overflow: hidden;
-    width: 100%;
-    max-width: 1400px;
+    width: min(100%, var(--split-shell-width));
+    max-width: none;
     max-height: 85vh;
     height: 80vh;
     margin: 0 auto;
@@ -108,9 +105,11 @@ h1 {
     aspect-ratio: auto;
 }
 
+.editor-container.split-pane[data-split-layout="preview-focus"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
 
 .editor-container.split-pane .editor-wrapper {
-    flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -154,37 +153,6 @@ h1 {
     display: none;
 }
 
-/* Floating close button */
-.preview-close-float {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.9);
-    color: #888;
-    cursor: pointer;
-    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
-    backdrop-filter: blur(4px);
-}
-
-.preview-close-float:hover {
-    background: #fff;
-    color: #5c3e2e;
-    border-color: #5c3e2e;
-}
-
-.preview-close-float:focus-visible {
-    outline: 2px solid #5c3e2e;
-    outline-offset: 1px;
-}
-
 .preview-iframe {
     flex: 1;
     width: 100%;
@@ -194,10 +162,11 @@ h1 {
 /* Split-mode action bar */
 .split-actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    width: 100%;
-    max-width: 1400px;
+    width: min(100%, var(--split-shell-width));
+    max-width: none;
     margin: 10px auto 0;
     padding: 0 2px;
 }
@@ -218,6 +187,72 @@ h1 {
     transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     white-space: nowrap;
+}
+
+.split-view-modes {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: auto;
+    padding: 4px;
+    border: 1px solid #ddd7d2;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.split-view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #6a574a;
+    cursor: pointer;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 13px;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.split-view-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: rgba(92, 62, 46, 0.08);
+    stroke-width: 1.5;
+}
+
+.split-view-btn:hover {
+    background: rgba(92, 62, 46, 0.08);
+    color: #5c3e2e;
+}
+
+.split-view-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.split-view-btn:disabled:hover {
+    background: transparent;
+    color: #6a574a;
+}
+
+.split-view-btn.is-active {
+    background: #5c3e2e;
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(92, 62, 46, 0.25);
+}
+
+.split-view-btn.is-active svg {
+    fill: rgba(255, 255, 255, 0.18);
+}
+
+.split-view-btn:focus-visible {
+    outline: 2px solid #5c3e2e;
+    outline-offset: 2px;
 }
 
 .split-action-btn:hover:not(:disabled) {
@@ -444,23 +479,71 @@ h1 {
 }
 
 .app-toast {
-    min-width: 220px;
-    max-width: 320px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    color: #fff;
-    background-color: rgba(44, 62, 80, 0.94);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 240px;
+    max-width: 360px;
+    padding: 11px 12px 12px;
+    border-radius: 10px;
+    color: #fffaf6;
+    background-color: rgba(92, 62, 46, 0.92);
+    border: 1px solid rgba(244, 229, 216, 0.22);
+    box-shadow: 0 10px 24px rgba(55, 35, 23, 0.2);
     font-size: 13px;
     transition: opacity 0.18s ease;
 }
 
 .app-toast-error {
-    background-color: rgba(166, 47, 47, 0.95);
+    background-color: rgba(122, 71, 52, 0.95);
 }
 
 .app-toast-hide {
     opacity: 0;
+}
+
+.app-toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.app-toast-tone {
+    color: #f6ded0;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+
+.app-toast-message {
+    color: #fffaf6;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.app-toast-close {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: #f6ded0;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.app-toast-close:hover {
+    background: rgba(255, 250, 246, 0.12);
+    color: #fffaf6;
+}
+
+.app-toast-close:focus-visible {
+    outline: 2px solid rgba(255, 250, 246, 0.6);
+    outline-offset: 2px;
 }
 
 .app-modal-overlay {
@@ -563,9 +646,14 @@ h1 {
     }
 
     .editor-container.split-pane {
-        flex-direction: column;
-        max-width: 95%;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+        width: 95%;
         height: 85vh;
+    }
+
+    .editor-container.split-pane[data-split-layout="preview-focus"] {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .editor-container.split-pane .editor-wrapper {
@@ -580,6 +668,26 @@ h1 {
 
     .split-actions {
         flex-wrap: wrap;
-        max-width: 95%;
+        width: 95%;
+    }
+
+    .split-view-modes {
+        width: 100%;
+        justify-content: center;
+        margin-right: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .control-panel,
+    .control-btn,
+    .editor-container,
+    .preview-pane,
+    .split-action-btn,
+    .split-view-btn,
+    .app-toast,
+    .app-toast-close {
+        animation: none !important;
+        transition: none !important;
     }
 }
