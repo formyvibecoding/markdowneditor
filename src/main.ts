@@ -919,6 +919,11 @@ function initApp(): void {
       return;
     }
 
+    if (!markdownInput.value.trim()) {
+      showToast(UI_TEXT.ERRORS.EMPTY_CONTENT_PREVIEW);
+      return;
+    }
+
     if (!canUseSplitPreview()) {
       const opened = splitPreview.openInNewTab();
       if (opened) {
@@ -944,6 +949,10 @@ function initApp(): void {
     splitPreview.clickIframeBtn('export-long-image-btn');
   });
   actionNewTab.addEventListener('click', () => {
+    if (!markdownInput.value.trim()) {
+      showToast(UI_TEXT.ERRORS.EMPTY_CONTENT_PREVIEW);
+      return;
+    }
     splitPreview.openInNewTab();
   });
 
