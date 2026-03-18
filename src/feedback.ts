@@ -146,6 +146,10 @@ export function showConfirm(options: ConfirmOptions): Promise<boolean> {
         event.preventDefault();
         close(false);
       }
+      if (event.key === 'Enter' && document.activeElement === confirmBtn) {
+        event.preventDefault();
+        close(true);
+      }
       if (event.key === 'Tab') {
         const focusables = [closeBtn, cancelBtn, confirmBtn].filter(
           Boolean

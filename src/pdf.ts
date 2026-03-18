@@ -3,7 +3,7 @@
  * 处理分页和单页 PDF 的生成逻辑
  */
 
-import { A4, PDF_CONFIG, UI_TEXT, STYLES, CDN_RESOURCES } from './config';
+import { A4, PDF_CONFIG, UI_TEXT, STYLES, VENDOR_RESOURCES } from './config';
 import { loadScriptWithFallback } from './utils';
 import { showErrorToast } from './feedback';
 
@@ -102,9 +102,9 @@ async function ensureLibsLoaded(): Promise<void> {
 
   libsLoadPromise = (async () => {
     await Promise.all([
-      loadScriptWithFallback(CDN_RESOURCES.HTML2CANVAS),
-      loadScriptWithFallback(CDN_RESOURCES.JSPDF),
-      loadScriptWithFallback(CDN_RESOURCES.HTML2PDF),
+      loadScriptWithFallback(VENDOR_RESOURCES.HTML2CANVAS),
+      loadScriptWithFallback(VENDOR_RESOURCES.JSPDF),
+      loadScriptWithFallback(VENDOR_RESOURCES.HTML2PDF),
     ]);
     libsLoaded = true;
   })();

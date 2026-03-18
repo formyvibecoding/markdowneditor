@@ -48,13 +48,27 @@ function safeParse(value: string | null): HistoryEntry[] {
 }
 
 export function loadHistoryEntries(): HistoryEntry[] {
-  return safeParse(window.localStorage.getItem(STORAGE_KEY)).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  try {
+    return safeParse(window.localStorage.getItem(STORAGE_KEY)).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  } catch {
+    return [];
+  }
 }
 
 function persistHistory(entries: HistoryEntry[]): void {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // localStorage 满时淘汰最旧一半记录后重试
+    const trimmed = entries.slice(0, Math.floor(entries.length / 2));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    } catch {
+      // 仍然失败则静默忽略
+    }
+  }
 }
 
 function normalizeForCompare(content: string): string {
@@ -155,7 +169,11 @@ export function deleteHistoryEntry(entryId: string): HistoryEntry[] {
 }
 
 export function clearHistoryEntries(): void {
-  window.localStorage.removeItem(STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // 静默忽略
+  }
 }
 
 export function formatMonthLabel(monthKey: string): string {

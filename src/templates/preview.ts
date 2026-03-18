@@ -4,7 +4,7 @@
  */
 
 import {
-  CDN_RESOURCES,
+  VENDOR_RESOURCES,
   UI_TEXT,
   STYLES,
   A4,
@@ -159,7 +159,7 @@ body {
   width: min(100%, var(--preview-page-max-width));
   margin: 0 auto;
   padding: 20px 20px 40px;
-  padding-top: 66px;
+  padding-top: 78px;
 }
 
 .markdown-body {
@@ -383,14 +383,14 @@ function setButtonContent(button, icon, label) {
   button.innerHTML = renderButtonContent(icon, label);
 }
 
-// CDN 资源（带回退）
-const CDN = {
-  html2canvas: ${JSON.stringify(CDN_RESOURCES.HTML2CANVAS)},
-  jspdf: ${JSON.stringify(CDN_RESOURCES.JSPDF)},
-  html2pdf: ${JSON.stringify(CDN_RESOURCES.HTML2PDF)},
+// Vendor 资源（本地打包）
+const VENDOR = {
+  html2canvas: ${JSON.stringify(VENDOR_RESOURCES.HTML2CANVAS)},
+  jspdf: ${JSON.stringify(VENDOR_RESOURCES.JSPDF)},
+  html2pdf: ${JSON.stringify(VENDOR_RESOURCES.HTML2PDF)},
 };
 
-// 加载脚本（带回退）
+// 加载脚本（本地 vendor）
 async function loadScript(urls) {
   for (const url of urls) {
     try {
@@ -406,7 +406,7 @@ async function loadScript(urls) {
       continue;
     }
   }
-  throw new Error('所有 CDN 源加载失败');
+  throw new Error('Vendor 脚本加载失败');
 }
 
 // 加载所有依赖
@@ -414,9 +414,9 @@ let libsLoaded = false;
 async function ensureLibs() {
   if (libsLoaded) return;
   await Promise.all([
-    loadScript(CDN.html2canvas),
-    loadScript(CDN.jspdf),
-    loadScript(CDN.html2pdf),
+    loadScript(VENDOR.html2canvas),
+    loadScript(VENDOR.jspdf),
+    loadScript(VENDOR.html2pdf),
   ]);
   libsLoaded = true;
 }
@@ -920,10 +920,31 @@ wrapTablesWithCopyButton();
 wrapCodeBlocksWithCopyButton();
 enhanceColorCodes();
 
+// Checkbox 双向绑定：通知父窗口
+function setupCheckboxSync() {
+  if (!contentArea) return;
+  contentArea.addEventListener('change', function(event) {
+    const target = event.target;
+    if (!target || target.tagName !== 'INPUT' || target.type !== 'checkbox') return;
+    // 找到该 checkbox 是第几个
+    const allCheckboxes = contentArea.querySelectorAll('input[type="checkbox"]');
+    const index = Array.from(allCheckboxes).indexOf(target);
+    if (index < 0) return;
+    window.parent.postMessage({
+      type: 'checkbox-toggle',
+      index: index,
+      checked: target.checked,
+    }, '*');
+  });
+}
+
+setupCheckboxSync();
+
 // Expose for incremental updates from parent
 window.wrapTablesWithCopyButton = wrapTablesWithCopyButton;
 window.wrapCodeBlocksWithCopyButton = wrapCodeBlocksWithCopyButton;
 window.enhanceColorCodes = enhanceColorCodes;
+window.setupCheckboxSync = setupCheckboxSync;
 
 // 预加载库
 ensureLibs().catch(() => {});
@@ -1132,7 +1153,7 @@ export function generatePreviewHtml(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Markdown 预览</title>
-  <link rel="stylesheet" href="${CDN_RESOURCES.GITHUB_MARKDOWN_CSS}">
+  <link rel="stylesheet" href="${VENDOR_RESOURCES.GITHUB_MARKDOWN_CSS}">
   <style>${previewStyles}</style>
 </head>
 <body${bodyClass}>

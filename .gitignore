@@ -4,6 +4,9 @@ node_modules/
 # Build output
 dist/
 
+# Auto-copied vendor files (generated from node_modules by Vite plugin)
+public/vendor/
+
 # Test output
 coverage/
 test-results/

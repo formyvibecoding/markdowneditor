@@ -105,27 +105,17 @@ export const STYLES = {
 } as const;
 
 // =============================================================================
-// CDN 资源配置（带回退）
+// Vendor 资源配置（本地打包，不依赖外部 CDN）
 // =============================================================================
-export const CDN_RESOURCES = {
-  /** html2canvas CDN URLs (主 + 备用) */
-  HTML2CANVAS: [
-    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-    'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
-    'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
-  ],
-  /** jsPDF CDN URLs (主 + 备用) */
-  JSPDF: [
-    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-    'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-    'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
-  ],
-  /** html2pdf CDN URLs (主 + 备用) */
-  HTML2PDF: [
-    'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
-    'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js',
-    'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js',
-  ],
+const BASE = import.meta.env.BASE_URL;
+
+export const VENDOR_RESOURCES = {
+  /** html2canvas 本地路径 */
+  HTML2CANVAS: [`${BASE}vendor/html2canvas.min.js`],
+  /** jsPDF 本地路径 */
+  JSPDF: [`${BASE}vendor/jspdf.umd.min.js`],
+  /** html2pdf 本地路径 */
+  HTML2PDF: [`${BASE}vendor/html2pdf.bundle.min.js`],
   /** GitHub Markdown CSS */
   GITHUB_MARKDOWN_CSS:
     'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/github-markdown-light.min.css',
@@ -160,134 +150,3 @@ export const MARKED_OPTIONS = {
   pedantic: false,
 } as const;
 
-// =============================================================================
-// 示例 Markdown 内容
-// =============================================================================
-export const EXAMPLE_MARKDOWN = `# 一级标题
-
-## 二级标题
-
-### 三级标题
-
-#### 四级标题
-
-##### 五级标题
-
-###### 六级标题
-
----
-
-**加粗文本**
-
-_斜体文本_
-
-***加粗斜体文本***
-
-~~删除线文本~~
-
----
-
-这是一个段落，后面跟一个[链接文本](https://example.com)。
-
-这是一个带标题的链接：[Google](https://www.google.com "Google 搜索")
-
-自动链接：<https://www.example.com>
-
----
-
-### 引用
-
-> 这是一级引用
->> 这是二级引用
->>> 这是三级引用
-
----
-
-### 列表
-
-#### 无序列表
-
-- 项目一
-- 项目二
-  - 子项目一
-    - 子子项目
-
-* 星号也可以用来创建列表
-+ 加号也可以
-
-#### 有序列表
-
-1. 第一项
-2. 第二项
-   1. 子项一
-   2. 子项二
-
----
-
-### 任务列表
-
-- [x] 已完成任务
-- [ ] 未完成任务
-  - [x] 子任务一
-  - [ ] 子任务二
-
----
-
-### 代码
-
-#### 行内代码
-
-这是 \`行内代码\` 的示例。
-
-#### 代码块
-
-\`\`\`python
-def hello():
-    print("Hello, Markdown!")
-\`\`\`
-
-或使用缩进方式：
-
-    def hello():
-        print("Hello, Markdown!")
-
----
-
-### 表格
-
-| 姓名 | 年龄 | 城市     |
-|------|------|----------|
-| 张三 | 25   | 北京     |
-| 李四 | 30   | 上海     |
-| 王五 | 28   | 广州     |
-
----
-
-### 图片
-
-![示例图片](https://www.mirabot.co.jp/application/themes/collabot/assets/img/top/logo.png)
-
----
-
-### 水平线
-
----
-
-***
-
-___
-
----
-
-### HTML 混用
-
-<p style="color:red">这是一段红色文本（HTML 插入）</p>
-
----
-
-### 脚注
-
-这是一个带脚注的示例[^1]。
-
-[^1]: 这里是脚注内容。
-`;
