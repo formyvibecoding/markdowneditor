@@ -10,6 +10,7 @@ A polished, minimalist Markdown editor that focuses on writing flow: real-time p
 
 - **Distraction-free editor** with a centered, single-pane layout
 - **Preview in a new tab** with GitHub-flavored Markdown styling
+- **GitHub Flavored Markdown (GFM)** support for tables, task lists, autolinks, and strikethrough
 - **Copy preview content** as rich text (style + content) with one click
 - **PDF export** in both paged and single-page modes
 - **Markdown download** with timestamped filenames

@@ -99,6 +99,7 @@ const ALLOWED_ATTR = [
   'title',
   'lang',
   'dir',
+  'align',
   // 链接属性
   'href',
   'target',

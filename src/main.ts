@@ -3,8 +3,7 @@
  * @version 2.9.0
  */
 
-import { marked } from 'marked';
-import { VERSION, MARKED_OPTIONS, UI_TEXT } from './config';
+import { VERSION, UI_TEXT } from './config';
 import {
   requireElement,
   downloadFile,
@@ -12,8 +11,8 @@ import {
   getPlatformInfo,
   debounce,
 } from './utils';
-import { sanitizeHtml } from './sanitize';
 import { generatePreviewHtml } from './templates/preview';
+import { renderMarkdown } from './markdown';
 import {
   clearHistoryEntries,
   deleteHistoryEntry,
@@ -56,20 +55,6 @@ function setupErrorBoundary(): void {
       showErrorToast('操作失败，请重试。');
     }
   };
-}
-
-function configureMarked(): void {
-  const renderer = new marked.Renderer();
-
-  renderer.checkbox = (checked: boolean): string => {
-    const checkedAttr = checked ? ' checked' : '';
-    return `<input type="checkbox"${checkedAttr}>`;
-  };
-
-  marked.setOptions({
-    ...MARKED_OPTIONS,
-    renderer,
-  });
 }
 
 function setupKeyboardShortcuts(
@@ -425,9 +410,7 @@ function downloadMarkdown(textarea: HTMLTextAreaElement): void {
 }
 
 function renderMarkdownToHtml(textarea: HTMLTextAreaElement): string {
-  const markdownText = textarea.value;
-  const rawHtml = marked.parse(markdownText) as string;
-  return sanitizeHtml(rawHtml);
+  return renderMarkdown(textarea.value);
 }
 
 function openPreviewInNewTab(
@@ -1221,7 +1204,6 @@ function initHistory(
 
 function initApp(): void {
   setupErrorBoundary();
-  configureMarked();
 
   const markdownInput = requireElement<HTMLTextAreaElement>('markdown-input');
   const previewBtn = requireElement<HTMLButtonElement>('preview-new-tab-btn');
