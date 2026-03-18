@@ -180,7 +180,8 @@ body {
   .preview-controls,
   .table-copy-btn,
   .code-copy-btn,
-  .color-swatch-btn {
+  .color-swatch-btn,
+  .image-width-popover {
     display: none !important;
   }
   body {
@@ -331,6 +332,153 @@ body {
   width: 10px;
   height: 10px;
 }
+
+.markdown-body img {
+  transition:
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.markdown-body img[data-width-editable='true']:hover {
+  box-shadow: 0 12px 30px rgba(27, 24, 21, 0.12);
+}
+
+.image-width-popover {
+  position: fixed;
+  z-index: 1200;
+  display: grid;
+  grid-template-columns: auto;
+  gap: 6px;
+  min-width: 228px;
+  padding: 9px 10px;
+  border: 1px solid rgba(92, 62, 46, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(27, 24, 21, 0.12);
+  backdrop-filter: blur(14px);
+  transform: translateY(0);
+  opacity: 1;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.image-width-popover[hidden] {
+  display: flex;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+}
+
+.image-width-popover__label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px 0 2px;
+  color: rgba(92, 62, 46, 0.72);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.image-width-popover__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.image-width-popover__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-height: 30px;
+  padding: 0 10px 0 12px;
+  border: 1px solid rgba(92, 62, 46, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.image-width-popover__input {
+  width: 72px;
+  border: none;
+  background: transparent;
+  color: #4d3326;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  outline: none;
+  text-align: right;
+}
+
+.image-width-popover__input::placeholder {
+  color: rgba(92, 62, 46, 0.34);
+}
+
+.image-width-popover__unit {
+  color: rgba(92, 62, 46, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.image-width-popover__reset {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(92, 62, 46, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.image-width-popover__reset:hover,
+.image-width-popover__reset:focus-visible {
+  background: rgba(92, 62, 46, 0.08);
+  border-color: rgba(92, 62, 46, 0.16);
+}
+
+.image-width-popover__apply {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgba(92, 62, 46, 0.18);
+  border-radius: 999px;
+  background: rgba(92, 62, 46, 0.08);
+  color: #4d3326;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.image-width-popover__apply:hover,
+.image-width-popover__apply:focus-visible {
+  background: rgba(92, 62, 46, 0.14);
+  border-color: rgba(92, 62, 46, 0.24);
+}
+
+.image-width-popover__hint {
+  min-height: 15px;
+  padding: 0 4px;
+  color: rgba(92, 62, 46, 0.58);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.image-width-popover__hint[data-tone='warning'] {
+  color: #8a4b1f;
+}
 `;
 
 // =============================================================================
@@ -361,6 +509,8 @@ const UI_TEXT = {
   COPIED: '${UI_TEXT.COPY_BUTTONS.COPIED}',
   COPY_FAILED: '${UI_TEXT.ERRORS.COPY_FAILED}',
 };
+
+const INITIAL_IMAGE_WIDTH_STATE = __IMAGE_WIDTH_STATE__;
 
 const BUTTON_ICONS = ${JSON.stringify(BUTTON_ICONS)};
 
@@ -480,6 +630,365 @@ function restoreCheckboxAttributes(states) {
       input.setAttribute('checked', '');
     } else {
       input.removeAttribute('checked');
+    }
+  });
+}
+
+let imageWidthState = { ...INITIAL_IMAGE_WIDTH_STATE };
+let activeImageTarget = null;
+let imageWidthHideTimer = null;
+let imageWidthPopover = null;
+let imageWidthInput = null;
+let imageWidthHint = null;
+let imageWidthUiInitialized = false;
+
+function getPreviewImages() {
+  if (!contentArea) return [];
+  return Array.from(contentArea.querySelectorAll('img'));
+}
+
+function getImageWidthKey(image) {
+  const images = getPreviewImages();
+  const index = images.indexOf(image);
+  const src = image.getAttribute('src') || image.currentSrc || '';
+  return src + '::' + index;
+}
+
+function normalizeImageWidthValue(value) {
+  if (value === 'auto') return 'auto';
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 'auto';
+  return String(Math.max(40, Math.min(2400, Math.round(numeric))));
+}
+
+function setImageWidthHint(message, tone) {
+  if (!imageWidthHint) return;
+  imageWidthHint.textContent = message || '';
+  if (tone) {
+    imageWidthHint.dataset.tone = tone;
+  } else {
+    delete imageWidthHint.dataset.tone;
+  }
+}
+
+function applyImageWidthStyle(image, width) {
+  image.dataset.widthEditable = 'true';
+  if (width === 'auto') {
+    image.style.width = '';
+    image.style.maxWidth = '';
+    image.style.height = '';
+    image.dataset.previewImageWidth = 'auto';
+    return;
+  }
+
+  image.style.width = width + 'px';
+  image.style.maxWidth = '100%';
+  image.style.height = 'auto';
+  image.dataset.previewImageWidth = width;
+}
+
+function syncImageWidthStateToParent() {
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage(
+      {
+        type: 'image-width-state',
+        widths: imageWidthState,
+      },
+      '*'
+    );
+  }
+}
+
+function updateImageWidthPopoverState() {
+  if (!imageWidthPopover || !activeImageTarget) return;
+  const activeValue =
+    imageWidthState[getImageWidthKey(activeImageTarget)] || 'auto';
+  if (imageWidthInput) {
+    imageWidthInput.value = activeValue === 'auto' ? '' : activeValue;
+    imageWidthInput.placeholder = activeValue === 'auto' ? '自动' : '';
+  }
+  setImageWidthHint('回车或点应用后生效');
+}
+
+function positionImageWidthPopover(target) {
+  if (!imageWidthPopover) return;
+  const rect = target.getBoundingClientRect();
+  imageWidthPopover.hidden = false;
+
+  const popoverRect = imageWidthPopover.getBoundingClientRect();
+  const nextLeft = Math.min(
+    Math.max(12, rect.right - popoverRect.width - 10),
+    window.innerWidth - popoverRect.width - 12
+  );
+  const nextTop = Math.max(12, rect.top + 10);
+
+  imageWidthPopover.style.left = nextLeft + 'px';
+  imageWidthPopover.style.top = nextTop + 'px';
+}
+
+function clearImageWidthHideTimer() {
+  if (imageWidthHideTimer !== null) {
+    window.clearTimeout(imageWidthHideTimer);
+    imageWidthHideTimer = null;
+  }
+}
+
+function hideImageWidthPopover() {
+  clearImageWidthHideTimer();
+  if (
+    imageWidthPopover &&
+    imageWidthPopover.contains(document.activeElement)
+  ) {
+    return;
+  }
+  activeImageTarget = null;
+  if (imageWidthPopover) {
+    imageWidthPopover.hidden = true;
+  }
+}
+
+function scheduleImageWidthPopoverHide() {
+  clearImageWidthHideTimer();
+  imageWidthHideTimer = window.setTimeout(() => {
+    if (
+      imageWidthPopover &&
+      imageWidthPopover.contains(document.activeElement)
+    ) {
+      return;
+    }
+    hideImageWidthPopover();
+  }, 140);
+}
+
+function showImageWidthPopover(target) {
+  clearImageWidthHideTimer();
+  activeImageTarget = target;
+  updateImageWidthPopoverState();
+  positionImageWidthPopover(target);
+}
+
+function ensureImageWidthPopover() {
+  if (imageWidthPopover) {
+    return imageWidthPopover;
+  }
+
+  const popover = document.createElement('div');
+  popover.className = 'image-width-popover';
+  popover.hidden = true;
+
+  const label = document.createElement('span');
+  label.className = 'image-width-popover__label';
+  label.textContent = '图宽';
+  const controls = document.createElement('div');
+  controls.className = 'image-width-popover__controls';
+  controls.appendChild(label);
+
+  const field = document.createElement('label');
+  field.className = 'image-width-popover__field';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'image-width-popover__input';
+  input.inputMode = 'numeric';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.setAttribute('aria-label', '设置图片宽度，单位像素');
+  field.appendChild(input);
+
+  const unit = document.createElement('span');
+  unit.className = 'image-width-popover__unit';
+  unit.textContent = 'px';
+  field.appendChild(unit);
+  controls.appendChild(field);
+
+  const applyValue = () => {
+    if (!activeImageTarget) return;
+    const key = getImageWidthKey(activeImageTarget);
+    const rawValue = input.value.trim();
+    let nextValue = 'auto';
+    let hintMessage = '回车或点应用后生效';
+    let hintTone = '';
+
+    if (rawValue) {
+      const numeric = Number(rawValue);
+      if (!Number.isFinite(numeric)) {
+        setImageWidthHint('请输入数字后再应用', 'warning');
+        return;
+      }
+
+      const normalized = normalizeImageWidthValue(rawValue);
+      nextValue = normalized;
+
+      if (Number(normalized) !== Math.round(numeric)) {
+        if (Number(numeric) < 40) {
+          hintMessage = '最小宽度是 40px，已调整为 40px';
+          hintTone = 'warning';
+        } else if (Number(numeric) > 2400) {
+          hintMessage = '最大宽度是 2400px，已调整为 2400px';
+          hintTone = 'warning';
+        }
+      } else {
+        hintMessage = '宽度已更新';
+      }
+    } else {
+      hintMessage = '已恢复原始宽度';
+    }
+
+    if (nextValue === 'auto') {
+      delete imageWidthState[key];
+    } else {
+      imageWidthState[key] = nextValue;
+    }
+
+    applyImageWidthStyle(activeImageTarget, nextValue);
+    updateImageWidthPopoverState();
+    syncImageWidthStateToParent();
+    if (imageWidthInput) {
+      imageWidthInput.value = nextValue === 'auto' ? '' : nextValue;
+    }
+    setImageWidthHint(hintMessage, hintTone);
+  };
+
+  input.addEventListener('input', () => {
+    setImageWidthHint('回车或点应用后生效');
+  });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyValue();
+    }
+  });
+  input.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+  input.addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+  });
+
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'image-width-popover__reset';
+  reset.textContent = '原始';
+  reset.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    input.value = '';
+    applyValue();
+  });
+  controls.appendChild(reset);
+
+  const applyButton = document.createElement('button');
+  applyButton.type = 'button';
+  applyButton.className = 'image-width-popover__apply';
+  applyButton.textContent = '应用';
+  applyButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    applyValue();
+  });
+  controls.appendChild(applyButton);
+  popover.appendChild(controls);
+
+  const hint = document.createElement('div');
+  hint.className = 'image-width-popover__hint';
+  hint.textContent = '回车或点应用后生效';
+  popover.appendChild(hint);
+
+  popover.addEventListener('pointerenter', clearImageWidthHideTimer);
+  popover.addEventListener('pointerleave', scheduleImageWidthPopoverHide);
+  popover.addEventListener('focusin', clearImageWidthHideTimer);
+  popover.addEventListener('focusout', () => {
+    window.setTimeout(() => {
+      if (
+        imageWidthPopover &&
+        !imageWidthPopover.contains(document.activeElement)
+      ) {
+        scheduleImageWidthPopoverHide();
+      }
+    }, 0);
+  });
+
+  document.body.appendChild(popover);
+  imageWidthPopover = popover;
+  imageWidthInput = input;
+  imageWidthHint = hint;
+  return popover;
+}
+
+function applySavedImageWidths() {
+  getPreviewImages().forEach((image) => {
+    const key = getImageWidthKey(image);
+    const width = imageWidthState[key] || 'auto';
+    applyImageWidthStyle(image, width);
+  });
+}
+
+function setupImageWidthControls() {
+  if (!contentArea) return;
+
+  ensureImageWidthPopover();
+  applySavedImageWidths();
+
+  if (imageWidthUiInitialized) {
+    return;
+  }
+
+  imageWidthUiInitialized = true;
+
+  contentArea.addEventListener('pointerover', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('img')
+      : null;
+    if (!(target instanceof HTMLImageElement) || !contentArea.contains(target)) {
+      return;
+    }
+    showImageWidthPopover(target);
+  });
+
+  contentArea.addEventListener('pointerout', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('img')
+      : null;
+    if (!(target instanceof HTMLImageElement) || target !== activeImageTarget) {
+      return;
+    }
+
+    const related = event.relatedTarget;
+    if (
+      related instanceof Node &&
+      imageWidthPopover &&
+      imageWidthPopover.contains(related)
+    ) {
+      return;
+    }
+
+    scheduleImageWidthPopoverHide();
+  });
+
+  contentArea.addEventListener('click', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('img')
+      : null;
+    if (!(target instanceof HTMLImageElement) || !contentArea.contains(target)) {
+      return;
+    }
+    showImageWidthPopover(target);
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (
+      imageWidthPopover &&
+      event.target instanceof Node &&
+      !imageWidthPopover.contains(event.target) &&
+      !(activeImageTarget && activeImageTarget.contains(event.target))
+    ) {
+      hideImageWidthPopover();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (activeImageTarget) {
+      positionImageWidthPopover(activeImageTarget);
     }
   });
 }
@@ -919,6 +1428,7 @@ if (copyBtn) {
 wrapTablesWithCopyButton();
 wrapCodeBlocksWithCopyButton();
 enhanceColorCodes();
+setupImageWidthControls();
 
 // Checkbox 双向绑定：通知父窗口
 function setupCheckboxSync() {
@@ -945,6 +1455,16 @@ window.wrapTablesWithCopyButton = wrapTablesWithCopyButton;
 window.wrapCodeBlocksWithCopyButton = wrapCodeBlocksWithCopyButton;
 window.enhanceColorCodes = enhanceColorCodes;
 window.setupCheckboxSync = setupCheckboxSync;
+window.setupImageWidthControls = setupImageWidthControls;
+window.applySavedImageWidths = applySavedImageWidths;
+window.getImageWidthState = function() {
+  return { ...imageWidthState };
+};
+window.setImageWidthState = function(nextState) {
+  imageWidthState =
+    nextState && typeof nextState === 'object' ? { ...nextState } : {};
+  applySavedImageWidths();
+};
 
 // 预加载库
 ensureLibs().catch(() => {});
@@ -1144,9 +1664,14 @@ if (longImageBtn) {
  */
 export function generatePreviewHtml(
   htmlContent: string,
-  embedded = false
+  embedded = false,
+  imageWidthState: Record<string, string> = {}
 ): string {
   const bodyClass = embedded ? ' class="embedded"' : '';
+  const scriptWithState = previewScript.replace(
+    '__IMAGE_WIDTH_STATE__',
+    JSON.stringify(imageWidthState)
+  );
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1168,7 +1693,7 @@ export function generatePreviewHtml(
       ${htmlContent}
     </article>
   </div>
-  <script>${previewScript}</script>
+  <script>${scriptWithState}</script>
 </body>
 </html>`;
 }

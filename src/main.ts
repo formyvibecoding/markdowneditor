@@ -430,9 +430,12 @@ function renderMarkdownToHtml(textarea: HTMLTextAreaElement): string {
   return sanitizeHtml(rawHtml);
 }
 
-function openPreviewInNewTab(textarea: HTMLTextAreaElement): boolean {
+function openPreviewInNewTab(
+  textarea: HTMLTextAreaElement,
+  imageWidthState: Record<string, string> = {}
+): boolean {
   const safeHtml = renderMarkdownToHtml(textarea);
-  const previewHtml = generatePreviewHtml(safeHtml);
+  const previewHtml = generatePreviewHtml(safeHtml, false, imageWidthState);
   const previewWindow = window.open('', '_blank');
 
   if (previewWindow) {
@@ -473,11 +476,15 @@ function updatePreviewContent(
     wrapCodeBlocksWithCopyButton?: () => void;
     enhanceColorCodes?: () => void;
     setupCheckboxSync?: () => void;
+    setupImageWidthControls?: () => void;
+    applySavedImageWidths?: () => void;
   };
   if (win.wrapTablesWithCopyButton) win.wrapTablesWithCopyButton();
   if (win.wrapCodeBlocksWithCopyButton) win.wrapCodeBlocksWithCopyButton();
   if (win.enhanceColorCodes) win.enhanceColorCodes();
   if (win.setupCheckboxSync) win.setupCheckboxSync();
+  if (win.setupImageWidthControls) win.setupImageWidthControls();
+  if (win.applySavedImageWidths) win.applySavedImageWidths();
 }
 
 function getHeadingLinePositions(textarea: HTMLTextAreaElement): number[] {
@@ -645,6 +652,7 @@ function initSplitPreview(
   let isTransitioning = false;
   let scrollSync: ReturnType<typeof setupScrollSync> | null = null;
   let resizeCleanup: (() => void) | null = null;
+  let imageWidthState: Record<string, string> = {};
   let layoutMode: SplitLayoutMode = canUsePreviewFocusLayout()
     ? 'preview-focus'
     : 'balanced';
@@ -652,8 +660,17 @@ function initSplitPreview(
   let hasExplicitLayoutPreference = false;
   let checkboxMessageCleanup: (() => void) | null = null;
 
-  const handleCheckboxMessage = (event: MessageEvent): void => {
-    if (!event.data || event.data.type !== 'checkbox-toggle') return;
+  const handlePreviewMessage = (event: MessageEvent): void => {
+    if (!event.data) return;
+    if (event.data.type === 'image-width-state') {
+      imageWidthState =
+        event.data.widths && typeof event.data.widths === 'object'
+          ? { ...event.data.widths }
+          : {};
+      return;
+    }
+
+    if (event.data.type !== 'checkbox-toggle') return;
     const { index, checked } = event.data as { index: number; checked: boolean };
     const lines = textarea.value.split('\n');
     let checkboxCount = 0;
@@ -710,7 +727,7 @@ function initSplitPreview(
 
   const fullRender = (): void => {
     const safeHtml = renderMarkdownToHtml(textarea);
-    const html = generatePreviewHtml(safeHtml, true);
+    const html = generatePreviewHtml(safeHtml, true, imageWidthState);
     writeToPreviewIframe(previewIframe, html);
     initialized = true;
     // Re-attach scroll sync after full rewrite
@@ -776,8 +793,9 @@ function initSplitPreview(
     textarea.addEventListener('input', debouncedUpdate);
     scrollSync = setupScrollSync(textarea, previewIframe);
     setTimeout(() => scrollSync?.enable(), 150);
-    window.addEventListener('message', handleCheckboxMessage);
-    checkboxMessageCleanup = () => window.removeEventListener('message', handleCheckboxMessage);
+    window.addEventListener('message', handlePreviewMessage);
+    checkboxMessageCleanup = () =>
+      window.removeEventListener('message', handlePreviewMessage);
     const onResize = (): void => {
       if (isOpen) {
         refreshLayoutMetrics(layoutMode === 'balanced');
@@ -987,7 +1005,15 @@ function initSplitPreview(
   };
 
   const openInNewTab = (): boolean => {
-    return openPreviewInNewTab(textarea);
+    const currentState = (
+      previewIframe.contentWindow as Window & {
+        getImageWidthState?: () => Record<string, string>;
+      } | null
+    )?.getImageWidthState?.();
+    if (currentState && typeof currentState === 'object') {
+      imageWidthState = { ...currentState };
+    }
+    return openPreviewInNewTab(textarea, imageWidthState);
   };
 
   const clickIframeBtn = (id: string): void => {
