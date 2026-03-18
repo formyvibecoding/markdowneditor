@@ -69,7 +69,7 @@ a {
   max-width: 100%;
   flex: 1;
   margin: 0;
-  padding: 10px;
+  padding: clamp(16px, 4vh, 38px) 10px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -175,13 +175,17 @@ h1 {
   font-size: 14px;
 }
 
+#preview-new-tab-btn {
+  min-width: 118px;
+}
+
 .editor-container.single-pane {
   display: flex;
   overflow: hidden;
   width: 100%;
   max-width: 800px;
   aspect-ratio: 1 / 1;
-  max-height: 80vh;
+  max-height: calc(100vh - 140px);
   margin: 0 auto;
   box-shadow: var(--shadow-shell);
 }
@@ -192,8 +196,8 @@ h1 {
   overflow: hidden;
   width: min(100%, var(--split-shell-width));
   max-width: none;
-  max-height: 85vh;
-  height: 80vh;
+  max-height: calc(100vh - 140px);
+  height: min(800px, calc(100vh - 140px));
   margin: 0 auto;
   gap: 0;
   box-shadow: var(--shadow-shell);
@@ -271,7 +275,8 @@ h1 {
 }
 
 .split-actions[hidden] {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .split-view-modes {
@@ -657,18 +662,22 @@ h1 {
   .editor-container {
     flex-direction: column;
     aspect-ratio: auto;
-    height: 70vh;
+    height: calc(100vh - 140px);
+    max-height: none;
   }
 
   .editor-container.single-pane {
     max-width: 95%;
+    aspect-ratio: auto;
+    max-height: none;
   }
 
   .editor-container.split-pane {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
     width: 95%;
-    height: 85vh;
+    height: calc(100vh - 160px);
+    max-height: none;
   }
 
   .editor-container.split-pane[data-split-layout='preview-focus'] {

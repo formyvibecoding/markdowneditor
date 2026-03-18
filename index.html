@@ -53,7 +53,7 @@
               <path d="m13.75 12.75 1.75 1.75 1.75-1.75"></path>
             </svg>
           </span>
-          <span class="app-button__label">下载</span>
+          <span class="app-button__label">下载 MD</span>
         </button>
       </div>
       <div class="editor-container single-pane" id="editor-container">
@@ -61,6 +61,7 @@
           <div class="editor-content">
             <textarea
               id="markdown-input"
+              aria-label="Markdown 编辑区"
               placeholder="在这里输入 Markdown 内容..."
             ></textarea>
           </div>
@@ -73,7 +74,7 @@
           ></iframe>
         </div>
       </div>
-      <div class="split-actions" id="split-actions" hidden>
+      <div class="split-actions" id="split-actions" hidden role="toolbar" aria-label="预览操作">
         <div class="split-view-modes" role="group" aria-label="预览视图比例">
           <button
             class="app-button split-view-btn is-active"
@@ -171,7 +172,7 @@
               <path d="M17 15.5h2.5"></path>
             </svg>
           </span>
-          <span class="app-button__label">保存 PDF（单页）</span>
+          <span class="app-button__label">下载 PDF（单页）</span>
         </button>
         <button
           class="app-button split-action-btn"
@@ -194,7 +195,7 @@
               ></path>
             </svg>
           </span>
-          <span class="app-button__label">复制预览</span>
+          <span class="app-button__label">复制富文本</span>
         </button>
         <button
           class="app-button split-action-btn"
@@ -240,7 +241,7 @@
               ></path>
             </svg>
           </span>
-          <span class="app-button__label">在新页面预览</span>
+          <span class="app-button__label">新页面预览</span>
         </button>
       </div>
     </div>

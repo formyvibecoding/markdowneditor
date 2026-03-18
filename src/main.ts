@@ -72,18 +72,25 @@ function configureMarked(): void {
   });
 }
 
-function setupKeyboardShortcuts(downloadFn: () => void): void {
+function setupKeyboardShortcuts(
+  downloadFn: () => void,
+  previewFn: () => void
+): void {
   const platformInfo = getPlatformInfo();
   const debouncedDownload = debounce(downloadFn, 300);
 
   document.addEventListener('keydown', (event: KeyboardEvent) => {
-    const isShortcutPressed = platformInfo.isMac
-      ? event.metaKey && event.key === 'Enter'
-      : event.ctrlKey && event.key === 'Enter';
+    const mod = platformInfo.isMac ? event.metaKey : event.ctrlKey;
 
-    if (isShortcutPressed) {
+    if (mod && event.key === 'Enter') {
       event.preventDefault();
       debouncedDownload();
+      return;
+    }
+
+    if (mod && event.key === 'p') {
+      event.preventDefault();
+      previewFn();
     }
   });
 }
@@ -279,6 +286,130 @@ function animateExit(
   return animation.finished.then(() => undefined).catch(() => undefined);
 }
 
+function buildPreviewClipboardPayload(container: HTMLElement): {
+  html: string;
+  text: string;
+} {
+  const clone = container.cloneNode(true) as HTMLElement;
+  const liveInputs = container.querySelectorAll<HTMLInputElement>(
+    'input[type="checkbox"]'
+  );
+  const cloneInputs = clone.querySelectorAll<HTMLInputElement>(
+    'input[type="checkbox"]'
+  );
+
+  liveInputs.forEach((input, index) => {
+    const cloneInput = cloneInputs[index];
+    if (!cloneInput) return;
+
+    if (input.checked) {
+      cloneInput.setAttribute('checked', '');
+    } else {
+      cloneInput.removeAttribute('checked');
+    }
+  });
+
+  clone
+    .querySelectorAll('.table-copy-btn, .code-copy-btn, .color-swatch-btn')
+    .forEach(element => element.remove());
+
+  return {
+    html: clone.innerHTML,
+    text: clone.innerText,
+  };
+}
+
+async function writeRichClipboardData(
+  html: string,
+  text: string
+): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
+      return true;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (error) {
+    // Fall through to execCommand fallback.
+  }
+
+  const selection = window.getSelection();
+  if (!selection) {
+    return false;
+  }
+
+  try {
+    let handled = false;
+    const onCopy = (event: ClipboardEvent): void => {
+      if (!event.clipboardData) {
+        return;
+      }
+      event.clipboardData.setData('text/html', html);
+      event.clipboardData.setData('text/plain', text);
+      event.preventDefault();
+      handled = true;
+    };
+
+    document.addEventListener('copy', onCopy, { once: true });
+    const copied = document.execCommand('copy');
+    return copied && handled;
+  } catch (error) {
+    // Fall through to selection-based fallback.
+  }
+
+  const previousRanges: Range[] = [];
+  for (let i = 0; i < selection.rangeCount; i += 1) {
+    previousRanges.push(selection.getRangeAt(i));
+  }
+
+  const fallbackNode = document.createElement('div');
+  fallbackNode.contentEditable = 'true';
+  fallbackNode.setAttribute('aria-hidden', 'true');
+  fallbackNode.style.position = 'fixed';
+  fallbackNode.style.top = '0';
+  fallbackNode.style.left = '-9999px';
+  fallbackNode.style.opacity = '0';
+  fallbackNode.innerHTML = html;
+  document.body.appendChild(fallbackNode);
+
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(fallbackNode);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return document.execCommand('copy');
+  } catch (error) {
+    return false;
+  } finally {
+    selection.removeAllRanges();
+    previousRanges.forEach(range => selection.addRange(range));
+    fallbackNode.remove();
+  }
+}
+
+async function copySplitPreviewContent(
+  iframe: HTMLIFrameElement
+): Promise<boolean> {
+  const contentArea = iframe.contentDocument?.getElementById(
+    'preview-content-area'
+  );
+  if (!(contentArea instanceof HTMLElement)) {
+    return false;
+  }
+
+  const { html, text } = buildPreviewClipboardPayload(contentArea);
+  return writeRichClipboardData(html, text);
+}
+
 function downloadMarkdown(textarea: HTMLTextAreaElement): void {
   const content = textarea.value;
 
@@ -341,10 +472,28 @@ function updatePreviewContent(
     wrapTablesWithCopyButton?: () => void;
     wrapCodeBlocksWithCopyButton?: () => void;
     enhanceColorCodes?: () => void;
+    setupCheckboxSync?: () => void;
   };
   if (win.wrapTablesWithCopyButton) win.wrapTablesWithCopyButton();
   if (win.wrapCodeBlocksWithCopyButton) win.wrapCodeBlocksWithCopyButton();
   if (win.enhanceColorCodes) win.enhanceColorCodes();
+  if (win.setupCheckboxSync) win.setupCheckboxSync();
+}
+
+function getHeadingLinePositions(textarea: HTMLTextAreaElement): number[] {
+  const text = textarea.value;
+  const lines = text.split('\n');
+  const positions: number[] = [];
+  // Approximate line height from textarea
+  const lineHeight = textarea.scrollHeight / Math.max(lines.length, 1);
+  let lineIndex = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^#{1,6}\s/.test(lines[i] ?? '')) {
+      positions.push(lineIndex * lineHeight);
+    }
+    lineIndex++;
+  }
+  return positions;
 }
 
 function setupScrollSync(
@@ -353,16 +502,51 @@ function setupScrollSync(
 ): { enable: () => void; disable: () => void } {
   let syncing = false;
 
+  const getPreviewHeadingPositions = (): number[] => {
+    const doc = iframe.contentDocument;
+    if (!doc) return [];
+    const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    return Array.from(headings).map(h => (h as HTMLElement).offsetTop);
+  };
+
   const onEditorScroll = (): void => {
     if (syncing) return;
     syncing = true;
     const doc = iframe.contentDocument;
     const scrollEl = doc?.scrollingElement ?? doc?.documentElement;
     if (scrollEl) {
-      const maxEditor = textarea.scrollHeight - textarea.clientHeight;
-      const pct = maxEditor > 0 ? textarea.scrollTop / maxEditor : 0;
-      const maxPreview = scrollEl.scrollHeight - scrollEl.clientHeight;
-      scrollEl.scrollTop = pct * maxPreview;
+      const editorPositions = getHeadingLinePositions(textarea);
+      const previewPositions = getPreviewHeadingPositions();
+
+      if (editorPositions.length > 0 && editorPositions.length === previewPositions.length) {
+        const scrollTop = textarea.scrollTop;
+        let anchorIdx = 0;
+        for (let i = editorPositions.length - 1; i >= 0; i--) {
+          if (editorPositions[i]! <= scrollTop + 10) {
+            anchorIdx = i;
+            break;
+          }
+        }
+        const nextIdx = Math.min(anchorIdx + 1, editorPositions.length - 1);
+        const editorStart = editorPositions[anchorIdx]!;
+        const editorEnd = anchorIdx === nextIdx
+          ? textarea.scrollHeight
+          : editorPositions[nextIdx]!;
+        const previewStart = previewPositions[anchorIdx]!;
+        const previewEnd = anchorIdx === nextIdx
+          ? scrollEl.scrollHeight
+          : previewPositions[nextIdx]!;
+        const segmentPct = editorEnd > editorStart
+          ? (scrollTop - editorStart) / (editorEnd - editorStart)
+          : 0;
+        scrollEl.scrollTop = previewStart + segmentPct * (previewEnd - previewStart);
+      } else {
+        // Fallback to percentage-based sync
+        const maxEditor = textarea.scrollHeight - textarea.clientHeight;
+        const pct = maxEditor > 0 ? textarea.scrollTop / maxEditor : 0;
+        const maxPreview = scrollEl.scrollHeight - scrollEl.clientHeight;
+        scrollEl.scrollTop = pct * maxPreview;
+      }
     }
     requestAnimationFrame(() => {
       syncing = false;
@@ -375,10 +559,37 @@ function setupScrollSync(
     const doc = iframe.contentDocument;
     const scrollEl = doc?.scrollingElement ?? doc?.documentElement;
     if (scrollEl) {
-      const maxPreview = scrollEl.scrollHeight - scrollEl.clientHeight;
-      const pct = maxPreview > 0 ? scrollEl.scrollTop / maxPreview : 0;
-      const maxEditor = textarea.scrollHeight - textarea.clientHeight;
-      textarea.scrollTop = pct * maxEditor;
+      const editorPositions = getHeadingLinePositions(textarea);
+      const previewPositions = getPreviewHeadingPositions();
+
+      if (previewPositions.length > 0 && editorPositions.length === previewPositions.length) {
+        const scrollTop = scrollEl.scrollTop;
+        let anchorIdx = 0;
+        for (let i = previewPositions.length - 1; i >= 0; i--) {
+          if (previewPositions[i]! <= scrollTop + 10) {
+            anchorIdx = i;
+            break;
+          }
+        }
+        const nextIdx = Math.min(anchorIdx + 1, previewPositions.length - 1);
+        const previewStart = previewPositions[anchorIdx]!;
+        const previewEnd = anchorIdx === nextIdx
+          ? scrollEl.scrollHeight
+          : previewPositions[nextIdx]!;
+        const editorStart = editorPositions[anchorIdx]!;
+        const editorEnd = anchorIdx === nextIdx
+          ? textarea.scrollHeight
+          : editorPositions[nextIdx]!;
+        const segmentPct = previewEnd > previewStart
+          ? (scrollTop - previewStart) / (previewEnd - previewStart)
+          : 0;
+        textarea.scrollTop = editorStart + segmentPct * (editorEnd - editorStart);
+      } else {
+        const maxPreview = scrollEl.scrollHeight - scrollEl.clientHeight;
+        const pct = maxPreview > 0 ? scrollEl.scrollTop / maxPreview : 0;
+        const maxEditor = textarea.scrollHeight - textarea.clientHeight;
+        textarea.scrollTop = pct * maxEditor;
+      }
     }
     requestAnimationFrame(() => {
       syncing = false;
@@ -439,11 +650,32 @@ function initSplitPreview(
     : 'balanced';
   let balancedEditorWidth = 700;
   let hasExplicitLayoutPreference = false;
+  let checkboxMessageCleanup: (() => void) | null = null;
+
+  const handleCheckboxMessage = (event: MessageEvent): void => {
+    if (!event.data || event.data.type !== 'checkbox-toggle') return;
+    const { index, checked } = event.data as { index: number; checked: boolean };
+    const lines = textarea.value.split('\n');
+    let checkboxCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i] ?? '';
+      const match = line.match(/^(\s*[-*+]\s*)\[([ xX])\]/);
+      if (match) {
+        if (checkboxCount === index) {
+          lines[i] = line.replace(
+            /^(\s*[-*+]\s*)\[([ xX])\]/,
+            `$1[${checked ? 'x' : ' '}]`
+          );
+          textarea.value = lines.join('\n');
+          textarea.dispatchEvent(new Event('input'));
+          break;
+        }
+        checkboxCount++;
+      }
+    }
+  };
 
   const parentContainer = container.parentElement;
-  const controlPanel =
-    parentContainer?.querySelector<HTMLElement>('.control-panel') ?? null;
-
   const applyLayoutMetrics = (): void => {
     const shellWidth = Math.round(
       layoutMode === 'preview-focus'
@@ -514,7 +746,6 @@ function initSplitPreview(
       editorPane,
       previewPane,
       splitActions,
-      controlPanel,
     ].filter((element): element is HTMLElement => Boolean(element));
   };
 
@@ -530,7 +761,7 @@ function initSplitPreview(
       layoutMode = canUsePreviewFocusLayout() ? 'preview-focus' : 'balanced';
     }
     captureBalancedWidth();
-    const beforeRects = snapshotRects([container, editorPane, controlPanel]);
+    const beforeRects = snapshotRects([container, editorPane]);
 
     isOpen = true;
     container.classList.remove('single-pane');
@@ -539,12 +770,14 @@ function initSplitPreview(
     editorPane.classList.remove('full-width');
     previewPane.hidden = false;
     splitActions.hidden = false;
-    setButtonContent(previewBtn, 'edit', '编辑');
+    setButtonContent(previewBtn, 'edit', '仅编辑');
     fullRender();
     applyLayoutMetrics();
     textarea.addEventListener('input', debouncedUpdate);
     scrollSync = setupScrollSync(textarea, previewIframe);
     setTimeout(() => scrollSync?.enable(), 150);
+    window.addEventListener('message', handleCheckboxMessage);
+    checkboxMessageCleanup = () => window.removeEventListener('message', handleCheckboxMessage);
     const onResize = (): void => {
       if (isOpen) {
         refreshLayoutMetrics(layoutMode === 'balanced');
@@ -573,12 +806,6 @@ function initSplitPreview(
           beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()
         ),
       ];
-
-      if (controlPanel && beforeRects.has(controlPanel)) {
-        animations.push(
-          animateFromRect(controlPanel, beforeRects.get(controlPanel)!)
-        );
-      }
 
       animations.push(
         animateEntrance(previewPane, {
@@ -618,7 +845,13 @@ function initSplitPreview(
     editorPane.classList.add('full-width');
     previewPane.hidden = true;
     splitActions.hidden = true;
-    setButtonContent(previewBtn, 'preview', '预览');
+    if (canUseSplitPreview()) {
+      setButtonContent(previewBtn, 'preview', '分屏预览');
+      previewBtn.title = '打开分屏预览';
+    } else {
+      setButtonContent(previewBtn, 'external', '新窗口预览');
+      previewBtn.title = `当前窗口较窄，将使用新窗口预览（至少 ${SPLIT_PREVIEW_MIN_VIEWPORT}px）`;
+    }
     textarea.removeEventListener('input', debouncedUpdate);
     if (scrollSync) {
       scrollSync.disable();
@@ -627,6 +860,10 @@ function initSplitPreview(
     if (resizeCleanup) {
       resizeCleanup();
       resizeCleanup = null;
+    }
+    if (checkboxMessageCleanup) {
+      checkboxMessageCleanup();
+      checkboxMessageCleanup = null;
     }
   };
 
@@ -638,7 +875,7 @@ function initSplitPreview(
     }
 
     isTransitioning = true;
-    const beforeRects = snapshotRects([container, editorPane, controlPanel]);
+    const beforeRects = snapshotRects([container, editorPane]);
     const exitingElements = [
       previewPane,
       splitActions,
@@ -655,7 +892,7 @@ function initSplitPreview(
       applyClosedState();
 
       await waitForNextFrame();
-      cancelAnimations([container, editorPane, controlPanel]);
+      cancelAnimations([container, editorPane]);
 
       const animations = [
         animateFromRect(
@@ -667,12 +904,6 @@ function initSplitPreview(
           beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()
         ),
       ];
-
-      if (controlPanel && beforeRects.has(controlPanel)) {
-        animations.push(
-          animateFromRect(controlPanel, beforeRects.get(controlPanel)!)
-        );
-      }
 
       await Promise.all(
         animations
@@ -692,7 +923,6 @@ function initSplitPreview(
       editorPane,
       previewPane,
       splitActions,
-      controlPanel,
     ]);
 
     layoutMode = mode;
@@ -739,12 +969,6 @@ function initSplitPreview(
         ),
       ];
 
-      if (controlPanel && beforeRects.has(controlPanel)) {
-        animations.push(
-          animateFromRect(controlPanel, beforeRects.get(controlPanel)!)
-        );
-      }
-
       await Promise.all(
         animations
           .filter(Boolean)
@@ -785,13 +1009,19 @@ function initSplitPreview(
   };
 }
 
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function getHistoryPreview(content: string): string {
   const firstLine = content.trim().split('\n')[0] ?? '';
-  if (firstLine.length <= 60) {
-    return firstLine;
-  }
-
-  return `${firstLine.slice(0, 60)}...`;
+  const raw = firstLine.length <= 60 ? firstLine : `${firstLine.slice(0, 60)}...`;
+  return escapeHtmlText(raw);
 }
 
 function renderHistoryList(
@@ -861,9 +1091,18 @@ function renderHistoryList(
   listElement
     .querySelectorAll<HTMLButtonElement>('[data-action="delete"]')
     .forEach(button => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const targetId = button.dataset.entryId;
         if (!targetId) {
+          return;
+        }
+
+        const shouldDelete = await showConfirm({
+          title: '删除记录',
+          message: '确定删除这条历史记录吗？',
+          confirmText: '删除',
+        });
+        if (!shouldDelete) {
           return;
         }
 
@@ -986,6 +1225,11 @@ function initApp(): void {
 
   markdownInput.value = '';
 
+  const platformInfo = getPlatformInfo();
+  const modKey = platformInfo.isMac ? '⌘' : 'Ctrl+';
+  downloadBtn.title = `下载 MD（${modKey}Enter）`;
+  previewBtn.title = `预览（${modKey}P）`;
+
   const splitPreview = initSplitPreview(
     markdownInput,
     editorContainer,
@@ -1014,15 +1258,25 @@ function initApp(): void {
 
   let lastCanUseSplitPreview = canUseSplitPreview();
   let lastCanUsePreviewFocus = canUsePreviewFocusLayout();
+  let actionCopyResetTimer: number | null = null;
+
+  const updatePreviewBtnLabel = (): void => {
+    if (splitPreview.isOpen()) {
+      setButtonContent(previewBtn, 'edit', '仅编辑');
+      previewBtn.title = '仅编辑';
+    } else if (canUseSplitPreview()) {
+      setButtonContent(previewBtn, 'preview', '分屏预览');
+      previewBtn.title = '打开分屏预览';
+    } else {
+      setButtonContent(previewBtn, 'external', '新窗口预览');
+      previewBtn.title = `当前窗口较窄，将使用新窗口预览（至少 ${SPLIT_PREVIEW_MIN_VIEWPORT}px）`;
+    }
+  };
 
   const syncSplitPreviewAvailability = (announce = false): void => {
     const splitAllowed = canUseSplitPreview();
     const previewFocusAllowed = canUsePreviewFocusLayout();
     const isSplitPreviewOpen = splitPreview.isOpen();
-
-    previewBtn.title = splitAllowed
-      ? '打开分屏预览'
-      : `当前窗口较窄，将使用新窗口预览（至少 ${SPLIT_PREVIEW_MIN_VIEWPORT}px）`;
 
     splitViewPreviewFocusBtn.disabled = !previewFocusAllowed;
     splitViewPreviewFocusBtn.title = previewFocusAllowed
@@ -1052,6 +1306,7 @@ function initApp(): void {
 
     lastCanUseSplitPreview = splitAllowed;
     lastCanUsePreviewFocus = previewFocusAllowed;
+    updatePreviewBtnLabel();
   };
 
   setSplitViewButtonState(splitPreview.getLayoutMode());
@@ -1064,6 +1319,7 @@ function initApp(): void {
   previewBtn.addEventListener('click', () => {
     if (splitPreview.isOpen()) {
       splitPreview.toggle();
+      updatePreviewBtnLabel();
       return;
     }
 
@@ -1083,6 +1339,7 @@ function initApp(): void {
     }
 
     splitPreview.toggle();
+    updatePreviewBtnLabel();
   });
 
   // Action bar: delegate to iframe buttons
@@ -1092,8 +1349,21 @@ function initApp(): void {
   actionSinglePdf.addEventListener('click', () => {
     splitPreview.clickIframeBtn('download-single-page-pdf-btn');
   });
-  actionCopy.addEventListener('click', () => {
-    splitPreview.clickIframeBtn('copy-preview-btn');
+  actionCopy.addEventListener('click', async () => {
+    const copied = await copySplitPreviewContent(previewIframe);
+    if (!copied) {
+      showErrorToast(UI_TEXT.ERRORS.COPY_FAILED);
+      return;
+    }
+
+    setButtonContent(actionCopy, 'check', '已复制');
+    if (actionCopyResetTimer !== null) {
+      window.clearTimeout(actionCopyResetTimer);
+    }
+    actionCopyResetTimer = window.setTimeout(() => {
+      setButtonContent(actionCopy, 'copy', '复制富文本');
+      actionCopyResetTimer = null;
+    }, 1500);
   });
   actionLongImage.addEventListener('click', () => {
     splitPreview.clickIframeBtn('export-long-image-btn');
@@ -1129,9 +1399,10 @@ function initApp(): void {
     }, 120)
   );
 
-  setupKeyboardShortcuts(() => {
-    downloadMarkdown(markdownInput);
-  });
+  setupKeyboardShortcuts(
+    () => downloadMarkdown(markdownInput),
+    () => previewBtn.click()
+  );
 
   initHistory(markdownInput, content => {
     markdownInput.value = content;
