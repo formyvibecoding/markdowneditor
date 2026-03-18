@@ -6,7 +6,7 @@
 // =============================================================================
 // 版本信息
 // =============================================================================
-export const VERSION = '2.8.1';
+export const VERSION = '2.9.0';
 
 // =============================================================================
 // A4 尺寸常量
@@ -93,10 +93,12 @@ export const STYLES = {
   },
   /** 字体 */
   FONTS: {
-    BODY: '"Helvetica Neue", Arial, sans-serif',
+    BODY: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "微软雅黑", sans-serif',
     EDITOR: '"Courier New", monospace',
-    BUTTON: "'Times New Roman', Times, serif",
-    PREVIEW: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "微软雅黑", sans-serif',
+    BUTTON:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "微软雅黑", sans-serif',
+    PREVIEW:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "微软雅黑", sans-serif',
   },
   /** 页码字体大小 (pt) */
   PAGE_NUMBER_FONT_SIZE: 9,

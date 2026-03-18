@@ -3,7 +3,15 @@
  * 将 HTML 模板从主逻辑中抽离，提高可维护性
  */
 
-import { CDN_RESOURCES, UI_TEXT, STYLES, A4, PDF_CONFIG, LONG_IMAGE } from '../config';
+import {
+  CDN_RESOURCES,
+  UI_TEXT,
+  STYLES,
+  A4,
+  PDF_CONFIG,
+  LONG_IMAGE,
+} from '../config';
+import { BUTTON_ICONS, renderButtonContent } from '../ui-icons';
 
 // =============================================================================
 // CSS 样式模板
@@ -13,6 +21,10 @@ const previewStyles = `
 body {
   --preview-page-max-width: 940px;
   --preview-content-max-width: 900px;
+  --preview-button-bg: rgba(255, 255, 255, 0.92);
+  --preview-button-bg-hover: #f6efe9;
+  --preview-button-border: rgba(92, 62, 46, 0.16);
+  --preview-button-border-strong: rgba(92, 62, 46, 0.28);
   margin: 0;
   padding: 0;
   background-color: ${STYLES.COLORS.BACKGROUND};
@@ -62,40 +74,84 @@ body {
   max-width: 320px;
   background: rgba(166, 47, 47, 0.95);
   color: #fff;
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 10px 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
   font-size: 13px;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-button__icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.app-button__label {
+  display: inline-flex;
+  align-items: center;
+}
+
 .pdf-btn {
-  background: #ffffff;
-  border: 1px solid #d2d2d2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 15px;
+  background: var(--preview-button-bg);
+  border: 1px solid var(--preview-button-border);
   color: #5c3e2e;
-  padding: 5px 12px;
-  border-radius: 6px;
+  border-radius: 999px;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   white-space: nowrap;
 }
 
 .pdf-btn:hover:not(:disabled) {
-  background-color: #f8f5f3;
-  border-color: #5c3e2e;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  background-color: var(--preview-button-bg-hover);
+  border-color: var(--preview-button-border-strong);
+  box-shadow: 0 8px 18px rgba(27, 24, 21, 0.1);
+  transform: translateY(-1px);
 }
 
 .pdf-btn:focus-visible {
-  outline: 2px solid #5c3e2e;
-  outline-offset: 1px;
+  outline: 2px solid rgba(92, 62, 46, 0.42);
+  outline-offset: 2px;
+}
+
+.pdf-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .pdf-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .container {
@@ -181,17 +237,21 @@ body {
   position: absolute;
   top: 8px;
   right: 8px;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
   font-size: 12px;
-  line-height: 1.2;
   color: #fff;
-  background: rgba(33, 37, 41, 0.75);
+  background: rgba(33, 37, 41, 0.76);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
 .markdown-body .table-with-copy:hover .table-copy-btn,
@@ -207,6 +267,13 @@ body {
 .markdown-body .code-block-with-copy .code-copy-btn:hover,
 .markdown-body .code-block-with-copy .code-copy-btn:focus-visible {
   background: rgba(33, 37, 41, 0.9);
+  transform: translateY(-1px);
+}
+
+.markdown-body .table-with-copy .table-copy-btn .app-button__icon svg,
+.markdown-body .code-block-with-copy .code-copy-btn .app-button__icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .markdown-body table th {
@@ -242,13 +309,21 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 10px;
-  height: 10px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(92, 62, 46, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 1px 2px rgba(27, 24, 21, 0.04);
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.markdown-body .color-swatch-btn:hover,
+.markdown-body .color-swatch-btn:focus-visible {
+  border-color: rgba(92, 62, 46, 0.26);
+  box-shadow: 0 6px 14px rgba(27, 24, 21, 0.08);
 }
 
 .markdown-body .color-swatch-btn .swatch {
@@ -286,6 +361,27 @@ const UI_TEXT = {
   COPIED: '${UI_TEXT.COPY_BUTTONS.COPIED}',
   COPY_FAILED: '${UI_TEXT.ERRORS.COPY_FAILED}',
 };
+
+const BUTTON_ICONS = ${JSON.stringify(BUTTON_ICONS)};
+
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderButtonContent(icon, label) {
+  return '<span class="app-button__icon" aria-hidden="true">' + BUTTON_ICONS[icon] + '</span>'
+    + '<span class="app-button__label">' + escapeHtml(label) + '</span>';
+}
+
+function setButtonContent(button, icon, label) {
+  if (!button) return;
+  button.innerHTML = renderButtonContent(icon, label);
+}
 
 // CDN 资源（带回退）
 const CDN = {
@@ -329,19 +425,19 @@ async function ensureLibs() {
 function disableButtons(loadingText) {
   pagedBtn.disabled = true;
   singleBtn.disabled = true;
-  pagedBtn.textContent = loadingText;
+  setButtonContent(pagedBtn, 'pagedPdf', loadingText);
 }
 
 function enableButtons() {
   pagedBtn.disabled = false;
   singleBtn.disabled = false;
-  pagedBtn.textContent = UI_TEXT.PAGED;
-  singleBtn.textContent = UI_TEXT.SINGLE;
+  setButtonContent(pagedBtn, 'pagedPdf', UI_TEXT.PAGED);
+  setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
 }
 
 function setCopyButtonState(text, disabled) {
   if (!copyBtn) return;
-  copyBtn.textContent = text;
+  setButtonContent(copyBtn, text === UI_TEXT.COPIED ? 'check' : 'copy', text);
   copyBtn.disabled = disabled;
 }
 
@@ -401,8 +497,8 @@ function wrapTablesWithCopyButton() {
     const copyTableButton = document.createElement('button');
     copyTableButton.className = 'table-copy-btn';
     copyTableButton.type = 'button';
-    copyTableButton.textContent = '复制表格';
     copyTableButton.setAttribute('aria-label', '复制表格');
+    setButtonContent(copyTableButton, 'table', '复制表格');
 
     copyTableButton.addEventListener('click', async (event) => {
       event.preventDefault();
@@ -433,11 +529,10 @@ function wrapTablesWithCopyButton() {
         return;
       }
 
-      const originalText = copyTableButton.textContent;
-      copyTableButton.textContent = '已复制';
+      setButtonContent(copyTableButton, 'check', '已复制');
       copyTableButton.disabled = true;
       setTimeout(() => {
-        copyTableButton.textContent = originalText || '复制表格';
+        setButtonContent(copyTableButton, 'table', '复制表格');
         copyTableButton.disabled = false;
       }, 1200);
     });
@@ -461,8 +556,8 @@ function wrapCodeBlocksWithCopyButton() {
     const copyCodeButton = document.createElement('button');
     copyCodeButton.className = 'code-copy-btn';
     copyCodeButton.type = 'button';
-    copyCodeButton.textContent = '复制代码';
     copyCodeButton.setAttribute('aria-label', '复制代码');
+    setButtonContent(copyCodeButton, 'code', '复制代码');
 
     copyCodeButton.addEventListener('click', async (event) => {
       event.preventDefault();
@@ -485,11 +580,10 @@ function wrapCodeBlocksWithCopyButton() {
         return;
       }
 
-      const originalText = copyCodeButton.textContent;
-      copyCodeButton.textContent = '已复制';
+      setButtonContent(copyCodeButton, 'check', '已复制');
       copyCodeButton.disabled = true;
       setTimeout(() => {
-        copyCodeButton.textContent = originalText || '复制代码';
+        setButtonContent(copyCodeButton, 'code', '复制代码');
         copyCodeButton.disabled = false;
       }, 1200);
     });
@@ -748,7 +842,7 @@ pagedBtn.addEventListener('click', async () => {
 // 单页 PDF（window.print 真实文字 PDF）
 singleBtn.addEventListener('click', () => {
   singleBtn.disabled = true;
-  singleBtn.textContent = UI_TEXT.SINGLE_PREPARING;
+  setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE_PREPARING);
 
   try {
     // 创建隐藏克隆以在打印宽度下测量内容高度
@@ -799,7 +893,7 @@ singleBtn.addEventListener('click', () => {
 
     // 恢复按钮状态后再打印，避免按钮被禁用时打印
     singleBtn.disabled = false;
-    singleBtn.textContent = UI_TEXT.SINGLE;
+    setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
 
     window.print();
 
@@ -814,7 +908,7 @@ singleBtn.addEventListener('click', () => {
     console.error('准备打印失败:', err);
     showErrorToast('准备打印时出错: ' + (err.message || err));
     singleBtn.disabled = false;
-    singleBtn.textContent = UI_TEXT.SINGLE;
+    setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
   }
 });
 
@@ -858,7 +952,9 @@ function disableAllButtons(loadingBtn, loadingText) {
   singleBtn.disabled = true;
   if (copyBtn) copyBtn.disabled = true;
   if (longImageBtn) longImageBtn.disabled = true;
-  loadingBtn.textContent = loadingText;
+  if (loadingBtn === longImageBtn) {
+    setButtonContent(loadingBtn, 'image', loadingText);
+  }
 }
 
 function enableAllButtons() {
@@ -867,10 +963,10 @@ function enableAllButtons() {
   if (copyBtn) copyBtn.disabled = false;
   if (longImageBtn) {
     longImageBtn.disabled = false;
-    longImageBtn.textContent = LONG_IMAGE_UI.DEFAULT;
+    setButtonContent(longImageBtn, 'image', LONG_IMAGE_UI.DEFAULT);
   }
-  pagedBtn.textContent = UI_TEXT.PAGED;
-  singleBtn.textContent = UI_TEXT.SINGLE;
+  setButtonContent(pagedBtn, 'pagedPdf', UI_TEXT.PAGED);
+  setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
 }
 
 function generateTimestamp() {
@@ -969,7 +1065,7 @@ if (longImageBtn) {
         );
       }
 
-      longImageBtn.textContent = LONG_IMAGE_UI.GENERATING;
+      setButtonContent(longImageBtn, 'image', LONG_IMAGE_UI.GENERATING);
 
       // html2canvas 截图
       const canvas = await html2canvas(wrapper, {
@@ -1025,7 +1121,10 @@ if (longImageBtn) {
  * @param embedded 是否嵌入 iframe（隐藏控件，减少 padding）
  * @returns 完整的预览页面 HTML
  */
-export function generatePreviewHtml(htmlContent: string, embedded = false): string {
+export function generatePreviewHtml(
+  htmlContent: string,
+  embedded = false
+): string {
   const bodyClass = embedded ? ' class="embedded"' : '';
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -1038,10 +1137,10 @@ export function generatePreviewHtml(htmlContent: string, embedded = false): stri
 </head>
 <body${bodyClass}>
   <div class="preview-controls">
-    <button id="download-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.PAGED}</button>
-    <button id="download-single-page-pdf-btn" class="pdf-btn">${UI_TEXT.PDF_BUTTONS.SINGLE}</button>
-    <button id="copy-preview-btn" class="pdf-btn">${UI_TEXT.COPY_BUTTONS.COPY}</button>
-    <button id="export-long-image-btn" class="pdf-btn">${UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT}</button>
+    <button id="download-pdf-btn" class="pdf-btn" type="button">${renderButtonContent('pagedPdf', UI_TEXT.PDF_BUTTONS.PAGED)}</button>
+    <button id="download-single-page-pdf-btn" class="pdf-btn" type="button">${renderButtonContent('singlePage', UI_TEXT.PDF_BUTTONS.SINGLE)}</button>
+    <button id="copy-preview-btn" class="pdf-btn" type="button">${renderButtonContent('copy', UI_TEXT.COPY_BUTTONS.COPY)}</button>
+    <button id="export-long-image-btn" class="pdf-btn" type="button">${renderButtonContent('image', UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT)}</button>
   </div>
   <div class="container">
     <article class="markdown-body" id="preview-content-area">

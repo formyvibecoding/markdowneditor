@@ -1,3 +1,9 @@
+import {
+  renderButtonContent,
+  renderIconOnlyButtonContent,
+  setIconOnlyButtonContent,
+} from './ui-icons';
+
 export interface ToastOptions {
   type?: 'info' | 'success' | 'error';
   durationMs?: number;
@@ -13,7 +19,9 @@ export interface ConfirmOptions {
 const TOAST_CONTAINER_ID = 'app-toast-container';
 
 function ensureToastContainer(): HTMLDivElement {
-  let container = document.getElementById(TOAST_CONTAINER_ID) as HTMLDivElement | null;
+  let container = document.getElementById(
+    TOAST_CONTAINER_ID
+  ) as HTMLDivElement | null;
   if (!container) {
     container = document.createElement('div');
     container.id = TOAST_CONTAINER_ID;
@@ -33,7 +41,8 @@ export function showToast(message: string, options: ToastOptions = {}): void {
 
   const tone = document.createElement('span');
   tone.className = 'app-toast-tone';
-  tone.textContent = type === 'error' ? '注意' : type === 'success' ? '完成' : '提示';
+  tone.textContent =
+    type === 'error' ? '注意' : type === 'success' ? '完成' : '提示';
 
   const text = document.createElement('p');
   text.className = 'app-toast-message';
@@ -46,9 +55,9 @@ export function showToast(message: string, options: ToastOptions = {}): void {
 
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
-  closeBtn.className = 'app-toast-close';
+  closeBtn.className = 'app-button app-button--icon-only app-toast-close';
   closeBtn.setAttribute('aria-label', '关闭通知');
-  closeBtn.textContent = '×';
+  setIconOnlyButtonContent(closeBtn, 'close', '关闭通知');
 
   toast.appendChild(content);
   toast.appendChild(closeBtn);
@@ -102,12 +111,12 @@ export function showConfirm(options: ConfirmOptions): Promise<boolean> {
     dialog.innerHTML = `
       <header class="app-modal-header">
         <h2 id="app-confirm-title">${title}</h2>
-        <button type="button" class="app-modal-close" aria-label="关闭">×</button>
+        <button type="button" class="app-button app-button--icon-only app-modal-close" aria-label="关闭">${renderIconOnlyButtonContent('close', '关闭')}</button>
       </header>
       <p class="app-modal-message"></p>
       <footer class="app-modal-actions">
-        <button type="button" class="app-modal-btn app-modal-cancel">${cancelText}</button>
-        <button type="button" class="app-modal-btn app-modal-confirm">${confirmText}</button>
+        <button type="button" class="app-button app-modal-btn app-modal-cancel">${renderButtonContent('cancel', cancelText)}</button>
+        <button type="button" class="app-button app-modal-btn app-modal-confirm">${renderButtonContent('confirm', confirmText)}</button>
       </footer>
     `;
 
@@ -120,9 +129,12 @@ export function showConfirm(options: ConfirmOptions): Promise<boolean> {
     document.body.appendChild(overlay);
     document.body.classList.add('modal-open');
 
-    const closeBtn = dialog.querySelector<HTMLButtonElement>('.app-modal-close');
-    const cancelBtn = dialog.querySelector<HTMLButtonElement>('.app-modal-cancel');
-    const confirmBtn = dialog.querySelector<HTMLButtonElement>('.app-modal-confirm');
+    const closeBtn =
+      dialog.querySelector<HTMLButtonElement>('.app-modal-close');
+    const cancelBtn =
+      dialog.querySelector<HTMLButtonElement>('.app-modal-cancel');
+    const confirmBtn =
+      dialog.querySelector<HTMLButtonElement>('.app-modal-confirm');
 
     const close = (confirmed: boolean): void => {
       cleanup();
@@ -135,12 +147,16 @@ export function showConfirm(options: ConfirmOptions): Promise<boolean> {
         close(false);
       }
       if (event.key === 'Tab') {
-        const focusables = [closeBtn, cancelBtn, confirmBtn].filter(Boolean) as HTMLElement[];
+        const focusables = [closeBtn, cancelBtn, confirmBtn].filter(
+          Boolean
+        ) as HTMLElement[];
         if (!focusables.length) {
           return;
         }
 
-        const currentIndex = focusables.indexOf(document.activeElement as HTMLElement);
+        const currentIndex = focusables.indexOf(
+          document.activeElement as HTMLElement
+        );
         if (event.shiftKey) {
           if (currentIndex <= 0) {
             event.preventDefault();

@@ -1,6 +1,6 @@
 /**
  * Markdown 编辑器主入口
- * @version 2.8.0
+ * @version 2.9.0
  */
 
 import { marked } from 'marked';
@@ -26,6 +26,7 @@ import {
   type HistoryEntry,
 } from './history';
 import { showConfirm, showErrorToast, showToast } from './feedback';
+import { renderButtonContent, setButtonContent } from './ui-icons';
 
 const SPLIT_PREVIEW_MIN_VIEWPORT = 1280;
 const PREVIEW_FOCUS_MIN_VIEWPORT = 1680;
@@ -40,7 +41,9 @@ function setupErrorBoundary(): void {
     console.error('全局错误:', { message, source, lineno, colno, error });
 
     if (import.meta.env.PROD) {
-      showErrorToast('应用发生错误，请刷新页面重试。如果问题持续存在，请联系技术支持。');
+      showErrorToast(
+        '应用发生错误，请刷新页面重试。如果问题持续存在，请联系技术支持。'
+      );
     }
 
     return false;
@@ -104,10 +107,16 @@ function waitForNextFrame(): Promise<void> {
 }
 
 function isRenderableElement(element: HTMLElement): boolean {
-  return element.isConnected && !element.hidden && element.getClientRects().length > 0;
+  return (
+    element.isConnected &&
+    !element.hidden &&
+    element.getClientRects().length > 0
+  );
 }
 
-function snapshotRects(elements: Array<HTMLElement | null | undefined>): Map<HTMLElement, DOMRect> {
+function snapshotRects(
+  elements: Array<HTMLElement | null | undefined>
+): Map<HTMLElement, DOMRect> {
   const rects = new Map<HTMLElement, DOMRect>();
 
   elements.forEach(element => {
@@ -120,7 +129,9 @@ function snapshotRects(elements: Array<HTMLElement | null | undefined>): Map<HTM
   return rects;
 }
 
-function cancelAnimations(elements: Array<HTMLElement | null | undefined>): void {
+function cancelAnimations(
+  elements: Array<HTMLElement | null | undefined>
+): void {
   elements.forEach(element => {
     element?.getAnimations().forEach(animation => animation.cancel());
   });
@@ -129,7 +140,11 @@ function cancelAnimations(elements: Array<HTMLElement | null | undefined>): void
 function animateFromRect(
   element: HTMLElement,
   firstRect: DOMRect,
-  options: { duration?: number; delay?: number; opacity?: [number, number] } = {},
+  options: {
+    duration?: number;
+    delay?: number;
+    opacity?: [number, number];
+  } = {}
 ): Animation | null {
   if (!isRenderableElement(element)) {
     return null;
@@ -144,15 +159,17 @@ function animateFromRect(
   const lastRect = element.getBoundingClientRect();
   const deltaX = firstRect.left - lastRect.left;
   const deltaY = firstRect.top - lastRect.top;
-  const scaleX = firstRect.width > 0 ? firstRect.width / Math.max(lastRect.width, 1) : 1;
-  const scaleY = firstRect.height > 0 ? firstRect.height / Math.max(lastRect.height, 1) : 1;
+  const scaleX =
+    firstRect.width > 0 ? firstRect.width / Math.max(lastRect.width, 1) : 1;
+  const scaleY =
+    firstRect.height > 0 ? firstRect.height / Math.max(lastRect.height, 1) : 1;
 
   if (
-    Math.abs(deltaX) < 1
-    && Math.abs(deltaY) < 1
-    && Math.abs(scaleX - 1) < 0.01
-    && Math.abs(scaleY - 1) < 0.01
-    && opacity[0] === opacity[1]
+    Math.abs(deltaX) < 1 &&
+    Math.abs(deltaY) < 1 &&
+    Math.abs(scaleX - 1) < 0.01 &&
+    Math.abs(scaleY - 1) < 0.01 &&
+    opacity[0] === opacity[1]
   ) {
     return null;
   }
@@ -175,13 +192,19 @@ function animateFromRect(
       delay,
       easing: MOTION_LAYOUT_EASING,
       fill: 'both',
-    },
+    }
   );
 }
 
 function animateEntrance(
   element: HTMLElement,
-  options: { fromX?: number; fromY?: number; fromScale?: number; delay?: number; duration?: number } = {},
+  options: {
+    fromX?: number;
+    fromY?: number;
+    fromScale?: number;
+    delay?: number;
+    duration?: number;
+  } = {}
 ): Animation | null {
   if (!isRenderableElement(element)) {
     return null;
@@ -211,13 +234,18 @@ function animateEntrance(
       delay,
       easing: MOTION_LAYOUT_EASING,
       fill: 'both',
-    },
+    }
   );
 }
 
 function animateExit(
   element: HTMLElement,
-  options: { toX?: number; toY?: number; toScale?: number; duration?: number } = {},
+  options: {
+    toX?: number;
+    toY?: number;
+    toScale?: number;
+    duration?: number;
+  } = {}
 ): Promise<void> {
   if (!isRenderableElement(element)) {
     return Promise.resolve();
@@ -245,7 +273,7 @@ function animateExit(
       duration,
       easing: MOTION_EXIT_EASING,
       fill: 'both',
-    },
+    }
   );
 
   return animation.finished.then(() => undefined).catch(() => undefined);
@@ -296,7 +324,10 @@ function writeToPreviewIframe(iframe: HTMLIFrameElement, html: string): void {
   doc.close();
 }
 
-function updatePreviewContent(iframe: HTMLIFrameElement, textarea: HTMLTextAreaElement): void {
+function updatePreviewContent(
+  iframe: HTMLIFrameElement,
+  textarea: HTMLTextAreaElement
+): void {
   const doc = iframe.contentDocument;
   if (!doc) return;
 
@@ -318,7 +349,7 @@ function updatePreviewContent(iframe: HTMLIFrameElement, textarea: HTMLTextAreaE
 
 function setupScrollSync(
   textarea: HTMLTextAreaElement,
-  iframe: HTMLIFrameElement,
+  iframe: HTMLIFrameElement
 ): { enable: () => void; disable: () => void } {
   let syncing = false;
 
@@ -333,7 +364,9 @@ function setupScrollSync(
       const maxPreview = scrollEl.scrollHeight - scrollEl.clientHeight;
       scrollEl.scrollTop = pct * maxPreview;
     }
-    requestAnimationFrame(() => { syncing = false; });
+    requestAnimationFrame(() => {
+      syncing = false;
+    });
   };
 
   const onPreviewScroll = (): void => {
@@ -347,7 +380,9 @@ function setupScrollSync(
       const maxEditor = textarea.scrollHeight - textarea.clientHeight;
       textarea.scrollTop = pct * maxEditor;
     }
-    requestAnimationFrame(() => { syncing = false; });
+    requestAnimationFrame(() => {
+      syncing = false;
+    });
   };
 
   let iframeCleanup: (() => void) | null = null;
@@ -383,7 +418,7 @@ function initSplitPreview(
   previewPane: HTMLElement,
   previewIframe: HTMLIFrameElement,
   previewBtn: HTMLButtonElement,
-  splitActions: HTMLElement,
+  splitActions: HTMLElement
 ): {
   toggle: () => void;
   openInNewTab: () => boolean;
@@ -399,22 +434,28 @@ function initSplitPreview(
   let isTransitioning = false;
   let scrollSync: ReturnType<typeof setupScrollSync> | null = null;
   let resizeCleanup: (() => void) | null = null;
-  let layoutMode: SplitLayoutMode = canUsePreviewFocusLayout() ? 'preview-focus' : 'balanced';
+  let layoutMode: SplitLayoutMode = canUsePreviewFocusLayout()
+    ? 'preview-focus'
+    : 'balanced';
   let balancedEditorWidth = 700;
   let hasExplicitLayoutPreference = false;
 
   const parentContainer = container.parentElement;
-  const controlPanel = parentContainer?.querySelector<HTMLElement>('.control-panel') ?? null;
+  const controlPanel =
+    parentContainer?.querySelector<HTMLElement>('.control-panel') ?? null;
 
   const applyLayoutMetrics = (): void => {
     const shellWidth = Math.round(
       layoutMode === 'preview-focus'
         ? balancedEditorWidth * 3
-        : balancedEditorWidth * 2,
+        : balancedEditorWidth * 2
     );
 
     container.dataset.splitLayout = layoutMode;
-    parentContainer?.style.setProperty('--split-shell-width', `${shellWidth}px`);
+    parentContainer?.style.setProperty(
+      '--split-shell-width',
+      `${shellWidth}px`
+    );
     parentContainer?.setAttribute('data-split-layout', layoutMode);
   };
 
@@ -468,14 +509,18 @@ function initSplitPreview(
   const debouncedUpdate = debounce(incrementalUpdate, 300);
 
   const getAnimatedShellElements = (): HTMLElement[] => {
-    return [container, editorPane, previewPane, splitActions, controlPanel].filter(
-      (element): element is HTMLElement => Boolean(element),
-    );
+    return [
+      container,
+      editorPane,
+      previewPane,
+      splitActions,
+      controlPanel,
+    ].filter((element): element is HTMLElement => Boolean(element));
   };
 
   const getSplitActionItems = (): HTMLElement[] => {
     return Array.from(splitActions.children).filter(
-      (child): child is HTMLElement => child instanceof HTMLElement,
+      (child): child is HTMLElement => child instanceof HTMLElement
     );
   };
 
@@ -494,7 +539,7 @@ function initSplitPreview(
     editorPane.classList.remove('full-width');
     previewPane.hidden = false;
     splitActions.hidden = false;
-    previewBtn.textContent = '编辑';
+    setButtonContent(previewBtn, 'edit', '编辑');
     fullRender();
     applyLayoutMetrics();
     textarea.addEventListener('input', debouncedUpdate);
@@ -519,21 +564,47 @@ function initSplitPreview(
       cancelAnimations(getAnimatedShellElements());
 
       const animations = [
-        animateFromRect(container, beforeRects.get(container) ?? container.getBoundingClientRect()),
-        animateFromRect(editorPane, beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()),
+        animateFromRect(
+          container,
+          beforeRects.get(container) ?? container.getBoundingClientRect()
+        ),
+        animateFromRect(
+          editorPane,
+          beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()
+        ),
       ];
 
       if (controlPanel && beforeRects.has(controlPanel)) {
-        animations.push(animateFromRect(controlPanel, beforeRects.get(controlPanel)!));
+        animations.push(
+          animateFromRect(controlPanel, beforeRects.get(controlPanel)!)
+        );
       }
 
-      animations.push(animateEntrance(previewPane, { fromX: 42, fromScale: 0.985, duration: 360 }));
-      animations.push(animateEntrance(splitActions, { fromY: 18, duration: 280 }));
+      animations.push(
+        animateEntrance(previewPane, {
+          fromX: 42,
+          fromScale: 0.985,
+          duration: 360,
+        })
+      );
+      animations.push(
+        animateEntrance(splitActions, { fromY: 18, duration: 280 })
+      );
       getSplitActionItems().forEach((item, index) => {
-        animations.push(animateEntrance(item, { fromY: 12, duration: 260, delay: 60 + (index * 28) }));
+        animations.push(
+          animateEntrance(item, {
+            fromY: 12,
+            duration: 260,
+            delay: 60 + index * 28,
+          })
+        );
       });
 
-      await Promise.all(animations.filter(Boolean).map(animation => animation!.finished.catch(() => undefined)));
+      await Promise.all(
+        animations
+          .filter(Boolean)
+          .map(animation => animation!.finished.catch(() => undefined))
+      );
       isTransitioning = false;
     })();
   };
@@ -547,7 +618,7 @@ function initSplitPreview(
     editorPane.classList.add('full-width');
     previewPane.hidden = true;
     splitActions.hidden = true;
-    previewBtn.textContent = '预览';
+    setButtonContent(previewBtn, 'preview', '预览');
     textarea.removeEventListener('input', debouncedUpdate);
     if (scrollSync) {
       scrollSync.disable();
@@ -568,7 +639,11 @@ function initSplitPreview(
 
     isTransitioning = true;
     const beforeRects = snapshotRects([container, editorPane, controlPanel]);
-    const exitingElements = [previewPane, splitActions, ...getSplitActionItems()];
+    const exitingElements = [
+      previewPane,
+      splitActions,
+      ...getSplitActionItems(),
+    ];
     cancelAnimations(exitingElements);
 
     void (async () => {
@@ -583,15 +658,27 @@ function initSplitPreview(
       cancelAnimations([container, editorPane, controlPanel]);
 
       const animations = [
-        animateFromRect(container, beforeRects.get(container) ?? container.getBoundingClientRect()),
-        animateFromRect(editorPane, beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()),
+        animateFromRect(
+          container,
+          beforeRects.get(container) ?? container.getBoundingClientRect()
+        ),
+        animateFromRect(
+          editorPane,
+          beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()
+        ),
       ];
 
       if (controlPanel && beforeRects.has(controlPanel)) {
-        animations.push(animateFromRect(controlPanel, beforeRects.get(controlPanel)!));
+        animations.push(
+          animateFromRect(controlPanel, beforeRects.get(controlPanel)!)
+        );
       }
 
-      await Promise.all(animations.filter(Boolean).map(animation => animation!.finished.catch(() => undefined)));
+      await Promise.all(
+        animations
+          .filter(Boolean)
+          .map(animation => animation!.finished.catch(() => undefined))
+      );
       isTransitioning = false;
     })();
   };
@@ -600,7 +687,13 @@ function initSplitPreview(
     if (layoutMode === mode) return;
     if (isTransitioning) return;
 
-    const beforeRects = snapshotRects([container, editorPane, previewPane, splitActions, controlPanel]);
+    const beforeRects = snapshotRects([
+      container,
+      editorPane,
+      previewPane,
+      splitActions,
+      controlPanel,
+    ]);
 
     layoutMode = mode;
     if (userInitiated) {
@@ -624,20 +717,39 @@ function initSplitPreview(
       cancelAnimations(getAnimatedShellElements());
 
       const animations = [
-        animateFromRect(container, beforeRects.get(container) ?? container.getBoundingClientRect()),
-        animateFromRect(editorPane, beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()),
-        animateFromRect(previewPane, beforeRects.get(previewPane) ?? previewPane.getBoundingClientRect()),
-        animateFromRect(splitActions, beforeRects.get(splitActions) ?? splitActions.getBoundingClientRect(), {
-          opacity: [0.88, 1],
-          duration: 300,
-        }),
+        animateFromRect(
+          container,
+          beforeRects.get(container) ?? container.getBoundingClientRect()
+        ),
+        animateFromRect(
+          editorPane,
+          beforeRects.get(editorPane) ?? editorPane.getBoundingClientRect()
+        ),
+        animateFromRect(
+          previewPane,
+          beforeRects.get(previewPane) ?? previewPane.getBoundingClientRect()
+        ),
+        animateFromRect(
+          splitActions,
+          beforeRects.get(splitActions) ?? splitActions.getBoundingClientRect(),
+          {
+            opacity: [0.88, 1],
+            duration: 300,
+          }
+        ),
       ];
 
       if (controlPanel && beforeRects.has(controlPanel)) {
-        animations.push(animateFromRect(controlPanel, beforeRects.get(controlPanel)!));
+        animations.push(
+          animateFromRect(controlPanel, beforeRects.get(controlPanel)!)
+        );
       }
 
-      await Promise.all(animations.filter(Boolean).map(animation => animation!.finished.catch(() => undefined)));
+      await Promise.all(
+        animations
+          .filter(Boolean)
+          .map(animation => animation!.finished.catch(() => undefined))
+      );
       isTransitioning = false;
     })();
   };
@@ -655,7 +767,9 @@ function initSplitPreview(
   };
 
   const clickIframeBtn = (id: string): void => {
-    const btn = previewIframe.contentDocument?.getElementById(id) as HTMLButtonElement | null;
+    const btn = previewIframe.contentDocument?.getElementById(
+      id
+    ) as HTMLButtonElement | null;
     if (btn) btn.click();
   };
 
@@ -683,7 +797,7 @@ function getHistoryPreview(content: string): string {
 function renderHistoryList(
   listElement: HTMLElement,
   entries: HistoryEntry[],
-  onRestore: (entry: HistoryEntry) => Promise<void>,
+  onRestore: (entry: HistoryEntry) => Promise<void>
 ): void {
   if (!entries.length) {
     listElement.innerHTML = '<p class="history-empty">暂无历史记录。</p>';
@@ -705,11 +819,11 @@ function renderHistoryList(
                 </div>
                 <p class="history-item-preview">${getHistoryPreview(entry.content)}</p>
                 <div class="history-item-actions">
-                  <button class="history-entry-btn" data-action="restore" data-entry-id="${entry.id}" type="button">恢复</button>
-                  <button class="history-entry-btn" data-action="delete" data-entry-id="${entry.id}" type="button">删除</button>
+                  <button class="app-button history-entry-btn" data-action="restore" data-entry-id="${entry.id}" type="button">${renderButtonContent('restore', '恢复')}</button>
+                  <button class="app-button history-entry-btn" data-action="delete" data-entry-id="${entry.id}" type="button">${renderButtonContent('delete', '删除')}</button>
                 </div>
               </article>
-            `,
+            `
             )
             .join('');
 
@@ -731,35 +845,44 @@ function renderHistoryList(
     })
     .join('');
 
-  listElement.querySelectorAll<HTMLButtonElement>('[data-action="restore"]').forEach(button => {
-    button.addEventListener('click', () => {
-      const targetEntry = entries.find(entry => entry.id === button.dataset.entryId);
-      if (targetEntry) {
-        void onRestore(targetEntry);
-      }
+  listElement
+    .querySelectorAll<HTMLButtonElement>('[data-action="restore"]')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        const targetEntry = entries.find(
+          entry => entry.id === button.dataset.entryId
+        );
+        if (targetEntry) {
+          void onRestore(targetEntry);
+        }
+      });
     });
-  });
 
-  listElement.querySelectorAll<HTMLButtonElement>('[data-action="delete"]').forEach(button => {
-    button.addEventListener('click', () => {
-      const targetId = button.dataset.entryId;
-      if (!targetId) {
-        return;
-      }
+  listElement
+    .querySelectorAll<HTMLButtonElement>('[data-action="delete"]')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        const targetId = button.dataset.entryId;
+        if (!targetId) {
+          return;
+        }
 
-      const nextEntries = deleteHistoryEntry(targetId);
-      renderHistoryList(listElement, nextEntries, onRestore);
+        const nextEntries = deleteHistoryEntry(targetId);
+        renderHistoryList(listElement, nextEntries, onRestore);
+      });
     });
-  });
 }
 
 function initHistory(
   textarea: HTMLTextAreaElement,
-  onRestore: (content: string) => void,
+  onRestore: (content: string) => void
 ): void {
-  const historyToggleBtn = requireElement<HTMLButtonElement>('history-toggle-btn');
-  const historyCloseBtn = requireElement<HTMLButtonElement>('history-close-btn');
-  const historyClearBtn = requireElement<HTMLButtonElement>('history-clear-btn');
+  const historyToggleBtn =
+    requireElement<HTMLButtonElement>('history-toggle-btn');
+  const historyCloseBtn =
+    requireElement<HTMLButtonElement>('history-close-btn');
+  const historyClearBtn =
+    requireElement<HTMLButtonElement>('history-clear-btn');
   const historyOverlay = requireElement<HTMLDivElement>('history-overlay');
   const historyList = requireElement<HTMLDivElement>('history-list');
 
@@ -837,7 +960,9 @@ function initApp(): void {
 
   const markdownInput = requireElement<HTMLTextAreaElement>('markdown-input');
   const previewBtn = requireElement<HTMLButtonElement>('preview-new-tab-btn');
-  const downloadBtn = requireElement<HTMLButtonElement>('download-markdown-btn');
+  const downloadBtn = requireElement<HTMLButtonElement>(
+    'download-markdown-btn'
+  );
   const editorContainer = requireElement<HTMLDivElement>('editor-container');
   const editorPane = requireElement<HTMLDivElement>('editor-pane');
   const previewPane = requireElement<HTMLDivElement>('preview-pane');
@@ -846,12 +971,18 @@ function initApp(): void {
 
   // Action bar buttons
   const actionPagedPdf = requireElement<HTMLButtonElement>('action-paged-pdf');
-  const actionSinglePdf = requireElement<HTMLButtonElement>('action-single-pdf');
+  const actionSinglePdf =
+    requireElement<HTMLButtonElement>('action-single-pdf');
   const actionCopy = requireElement<HTMLButtonElement>('action-copy');
-  const actionLongImage = requireElement<HTMLButtonElement>('action-long-image');
+  const actionLongImage =
+    requireElement<HTMLButtonElement>('action-long-image');
   const actionNewTab = requireElement<HTMLButtonElement>('action-new-tab');
-  const splitViewBalancedBtn = requireElement<HTMLButtonElement>('split-view-balanced');
-  const splitViewPreviewFocusBtn = requireElement<HTMLButtonElement>('split-view-preview-focus');
+  const splitViewBalancedBtn = requireElement<HTMLButtonElement>(
+    'split-view-balanced'
+  );
+  const splitViewPreviewFocusBtn = requireElement<HTMLButtonElement>(
+    'split-view-preview-focus'
+  );
 
   markdownInput.value = '';
 
@@ -862,14 +993,23 @@ function initApp(): void {
     previewPane,
     previewIframe,
     previewBtn,
-    splitActions,
+    splitActions
   );
 
   const setSplitViewButtonState = (mode: SplitLayoutMode): void => {
     splitViewBalancedBtn.classList.toggle('is-active', mode === 'balanced');
-    splitViewBalancedBtn.setAttribute('aria-pressed', String(mode === 'balanced'));
-    splitViewPreviewFocusBtn.classList.toggle('is-active', mode === 'preview-focus');
-    splitViewPreviewFocusBtn.setAttribute('aria-pressed', String(mode === 'preview-focus'));
+    splitViewBalancedBtn.setAttribute(
+      'aria-pressed',
+      String(mode === 'balanced')
+    );
+    splitViewPreviewFocusBtn.classList.toggle(
+      'is-active',
+      mode === 'preview-focus'
+    );
+    splitViewPreviewFocusBtn.setAttribute(
+      'aria-pressed',
+      String(mode === 'preview-focus')
+    );
   };
 
   let lastCanUseSplitPreview = canUseSplitPreview();
@@ -878,6 +1018,7 @@ function initApp(): void {
   const syncSplitPreviewAvailability = (announce = false): void => {
     const splitAllowed = canUseSplitPreview();
     const previewFocusAllowed = canUsePreviewFocusLayout();
+    const isSplitPreviewOpen = splitPreview.isOpen();
 
     previewBtn.title = splitAllowed
       ? '打开分屏预览'
@@ -888,17 +1029,24 @@ function initApp(): void {
       ? '保持编辑区不变，扩张预览区到两倍宽'
       : `当前窗口宽度不足，至少 ${PREVIEW_FOCUS_MIN_VIEWPORT}px 可使用 1:2 视图`;
 
-    if (!splitAllowed && splitPreview.isOpen()) {
+    if (!splitAllowed && isSplitPreviewOpen) {
       splitPreview.close();
       setSplitViewButtonState('balanced');
       if (announce && lastCanUseSplitPreview) {
-        showToast(`窗口宽度不足，已退出分屏预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px，请使用新窗口预览。`);
+        showToast(
+          `窗口宽度不足，已退出分屏预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px，请使用新窗口预览。`
+        );
       }
-    } else if (!previewFocusAllowed && splitPreview.getLayoutMode() === 'preview-focus') {
+    } else if (
+      !previewFocusAllowed &&
+      splitPreview.getLayoutMode() === 'preview-focus'
+    ) {
       splitPreview.setSystemLayoutMode('balanced');
       setSplitViewButtonState('balanced');
-      if (announce && lastCanUsePreviewFocus) {
-        showToast(`窗口宽度不足，已切回 1:1 视图。1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`);
+      if (announce && lastCanUsePreviewFocus && isSplitPreviewOpen) {
+        showToast(
+          `窗口宽度不足，已切回 1:1 视图。1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`
+        );
       }
     }
 
@@ -927,7 +1075,9 @@ function initApp(): void {
     if (!canUseSplitPreview()) {
       const opened = splitPreview.openInNewTab();
       if (opened) {
-        showToast(`当前窗口宽度不足，已改为新窗口预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px。`);
+        showToast(
+          `当前窗口宽度不足，已改为新窗口预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px。`
+        );
       }
       return;
     }
@@ -963,16 +1113,21 @@ function initApp(): void {
 
   splitViewPreviewFocusBtn.addEventListener('click', () => {
     if (!canUsePreviewFocusLayout()) {
-      showToast(`当前窗口宽度不足，1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`);
+      showToast(
+        `当前窗口宽度不足，1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`
+      );
       return;
     }
     splitPreview.setLayoutMode('preview-focus');
     setSplitViewButtonState('preview-focus');
   });
 
-  window.addEventListener('resize', debounce(() => {
-    syncSplitPreviewAvailability(true);
-  }, 120));
+  window.addEventListener(
+    'resize',
+    debounce(() => {
+      syncSplitPreviewAvailability(true);
+    }, 120)
+  );
 
   setupKeyboardShortcuts(() => {
     downloadMarkdown(markdownInput);

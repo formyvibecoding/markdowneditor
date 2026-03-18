@@ -1,77 +1,358 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Markdown 编辑器</title>
-    <link rel="stylesheet" href="/src/styles.css">
-</head>
-<body>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
     <div class="container">
-        <div class="control-panel">
-            <button id="preview-new-tab-btn" class="control-btn">预览</button>
-            <button id="download-markdown-btn" class="control-btn">下载</button>
+      <div class="control-panel">
+        <button
+          id="preview-new-tab-btn"
+          class="app-button control-btn"
+          type="button"
+        >
+          <span class="app-button__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3.5" y="5" width="7" height="14" rx="2"></rect>
+              <path d="M13.5 8.5h7"></path>
+              <path d="M13.5 12h7"></path>
+              <path d="M13.5 15.5h5.5"></path>
+            </svg>
+          </span>
+          <span class="app-button__label">预览</span>
+        </button>
+        <button
+          id="download-markdown-btn"
+          class="app-button control-btn"
+          type="button"
+        >
+          <span class="app-button__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M4 6.5h16v11H4z"></path>
+              <path d="M7.5 14.5v-5l2.5 3 2.5-3v5"></path>
+              <path d="M15.5 10.5v4"></path>
+              <path d="m13.75 12.75 1.75 1.75 1.75-1.75"></path>
+            </svg>
+          </span>
+          <span class="app-button__label">下载</span>
+        </button>
+      </div>
+      <div class="editor-container single-pane" id="editor-container">
+        <div class="editor-wrapper full-width" id="editor-pane">
+          <div class="editor-content">
+            <textarea
+              id="markdown-input"
+              placeholder="在这里输入 Markdown 内容..."
+            ></textarea>
+          </div>
         </div>
-        <div class="editor-container single-pane" id="editor-container">
-            <div class="editor-wrapper full-width" id="editor-pane">
-                <div class="editor-content">
-                    <textarea id="markdown-input" placeholder="在这里输入 Markdown 内容..."></textarea>
-                </div>
-            </div>
-            <div class="preview-pane" id="preview-pane" hidden>
-                <iframe id="preview-iframe" class="preview-iframe" title="Markdown 预览"></iframe>
-            </div>
+        <div class="preview-pane" id="preview-pane" hidden>
+          <iframe
+            id="preview-iframe"
+            class="preview-iframe"
+            title="Markdown 预览"
+          ></iframe>
         </div>
-        <div class="split-actions" id="split-actions" hidden>
-            <div class="split-view-modes" role="group" aria-label="预览视图比例">
-                <button class="split-view-btn is-active" id="split-view-balanced" type="button" aria-pressed="true" title="编辑区与预览区等宽">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <rect x="3.5" y="5" width="6.5" height="14" rx="1.8"></rect>
-                        <rect x="14" y="5" width="6.5" height="14" rx="1.8"></rect>
-                    </svg>
-                    <span>1:1</span>
-                </button>
-                <button class="split-view-btn" id="split-view-preview-focus" type="button" aria-pressed="false" title="保持编辑区不变，扩张预览区到两倍宽">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <rect x="3.5" y="5" width="4.5" height="14" rx="1.6"></rect>
-                        <rect x="11" y="5" width="9.5" height="14" rx="1.8"></rect>
-                    </svg>
-                    <span>1:2</span>
-                </button>
-            </div>
-            <button class="split-action-btn" id="action-paged-pdf" type="button">下载 PDF（分页）</button>
-            <button class="split-action-btn" id="action-single-pdf" type="button">保存 PDF（单页）</button>
-            <button class="split-action-btn" id="action-copy" type="button">复制预览</button>
-            <button class="split-action-btn" id="action-long-image" type="button">导出长图</button>
-            <button class="split-action-btn" id="action-new-tab" type="button">在新页面预览</button>
+      </div>
+      <div class="split-actions" id="split-actions" hidden>
+        <div class="split-view-modes" role="group" aria-label="预览视图比例">
+          <button
+            class="app-button split-view-btn is-active"
+            id="split-view-balanced"
+            type="button"
+            aria-pressed="true"
+            title="编辑区与预览区等宽"
+          >
+            <span class="app-button__icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                focusable="false"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3.5" y="5" width="6.5" height="14" rx="1.8"></rect>
+                <rect x="14" y="5" width="6.5" height="14" rx="1.8"></rect>
+              </svg>
+            </span>
+            <span class="app-button__label">1:1</span>
+          </button>
+          <button
+            class="app-button split-view-btn"
+            id="split-view-preview-focus"
+            type="button"
+            aria-pressed="false"
+            title="保持编辑区不变，扩张预览区到两倍宽"
+          >
+            <span class="app-button__icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                focusable="false"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3.5" y="5" width="4.5" height="14" rx="1.6"></rect>
+                <rect x="11" y="5" width="9.5" height="14" rx="1.8"></rect>
+              </svg>
+            </span>
+            <span class="app-button__label">1:2</span>
+          </button>
         </div>
+        <button
+          class="app-button split-action-btn"
+          id="action-paged-pdf"
+          type="button"
+        >
+          <span class="app-button__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M8 3.5h6l4 4V20a.5.5 0 0 1-.5.5h-11A.5.5 0 0 1 6 20V4a.5.5 0 0 1 .5-.5H8z"
+              ></path>
+              <path d="M14 3.5V8h4"></path>
+              <path d="M9 12.5h6"></path>
+              <path d="M9 16h4.5"></path>
+            </svg>
+          </span>
+          <span class="app-button__label">下载 PDF（分页）</span>
+        </button>
+        <button
+          class="app-button split-action-btn"
+          id="action-single-pdf"
+          type="button"
+        >
+          <span class="app-button__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="5" y="4" width="11" height="15" rx="2"></rect>
+              <path d="M9 8h3.5"></path>
+              <path d="M9 11.5h5"></path>
+              <path d="M9 15h4"></path>
+              <path d="M17 8.5h2.5"></path>
+              <path d="M17 12h2.5"></path>
+              <path d="M17 15.5h2.5"></path>
+            </svg>
+          </span>
+          <span class="app-button__label">保存 PDF（单页）</span>
+        </button>
+        <button
+          class="app-button split-action-btn"
+          id="action-copy"
+          type="button"
+        >
+          <span class="app-button__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="9" y="7" width="10" height="12" rx="2"></rect>
+              <path
+                d="M15 7V5.5A1.5 1.5 0 0 0 13.5 4h-7A1.5 1.5 0 0 0 5 5.5v9A1.5 1.5 0 0 0 6.5 16H9"
+              ></path>
+            </svg>
+          </span>
+          <span class="app-button__label">复制预览</span>
+        </button>
+        <button
+          class="app-button split-action-btn"
+          id="action-long-image"
+          type="button"
+        >
+          <span class="app-button__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3.5" y="5" width="17" height="14" rx="2"></rect>
+              <circle cx="9" cy="10" r="1.5"></circle>
+              <path d="m6.5 17 4.5-4.5 3.5 3.5 2.5-2.5 3 3"></path>
+            </svg>
+          </span>
+          <span class="app-button__label">导出长图</span>
+        </button>
+        <button
+          class="app-button split-action-btn"
+          id="action-new-tab"
+          type="button"
+        >
+          <span class="app-button__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              focusable="false"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M14 5h5v5"></path>
+              <path d="M10 14 19 5"></path>
+              <path
+                d="M19 13v5.5a.5.5 0 0 1-.5.5H5.5a.5.5 0 0 1-.5-.5V5.5a.5.5 0 0 1 .5-.5H11"
+              ></path>
+            </svg>
+          </span>
+          <span class="app-button__label">在新页面预览</span>
+        </button>
+      </div>
     </div>
     <footer class="app-footer">
-        <button id="history-toggle-btn" class="footer-link" aria-label="历史记录" title="历史记录" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M13 3a9 9 0 1 0 8.95 10h-2.02A7 7 0 1 1 13 5a6.96 6.96 0 0 1 4.95 2.05L15 10h7V3l-2.65 2.65A8.95 8.95 0 0 0 13 3zm-1 5v5.59l4.3 2.48 1-1.73-3.3-1.9V8H12z"/>
-            </svg>
-        </button>
-        <a class="footer-link" href="https://github.com/formyvibecoding/markdowneditor/tree/main" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M12 0.5C5.37 0.5 0 5.87 0 12.5c0 5.29 3.438 9.78 8.205 11.366.6.11.82-.261.82-.579 0-.286-.01-1.045-.016-2.052-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.085 1.84 1.238 1.84 1.238 1.07 1.834 2.809 1.305 3.495.998.108-.775.418-1.305.762-1.605-2.665-.304-5.467-1.332-5.467-5.93 0-1.31.468-2.381 1.236-3.221-.124-.303-.536-1.523.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.655 1.653.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.624-5.479 5.921.43.371.815 1.102.815 2.222 0 1.604-.015 2.896-.015 3.286 0 .32.216.694.825.576C20.565 22.276 24 17.79 24 12.5 24 5.87 18.627 0.5 12 0.5z"/>
-            </svg>
-        </a>
+      <button
+        id="history-toggle-btn"
+        class="app-button app-button--icon-only footer-link"
+        aria-label="历史记录"
+        title="历史记录"
+        type="button"
+      >
+        <span class="app-button__icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            focusable="false"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"></path>
+            <path d="M4.5 5.5v4h4"></path>
+            <path d="M12 8.5V12l2.75 1.75"></path>
+          </svg>
+        </span>
+        <span class="sr-only">历史记录</span>
+      </button>
+      <a
+        class="app-button app-button--icon-only footer-link"
+        href="https://github.com/formyvibecoding/markdowneditor/tree/main"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub Repository"
+      >
+        <span class="app-button__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false" fill="currentColor">
+            <path
+              d="M12 0.5C5.37 0.5 0 5.87 0 12.5c0 5.29 3.438 9.78 8.205 11.366.6.11.82-.261.82-.579 0-.286-.01-1.045-.016-2.052-3.338.726-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.085 1.84 1.238 1.84 1.238 1.07 1.834 2.809 1.305 3.495.998.108-.775.418-1.305.762-1.605-2.665-.304-5.467-1.332-5.467-5.93 0-1.31.468-2.381 1.236-3.221-.124-.303-.536-1.523.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.655 1.653.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.807 5.624-5.479 5.921.43.371.815 1.102.815 2.222 0 1.604-.015 2.896-.015 3.286 0 .32.216.694.825.576C20.565 22.276 24 17.79 24 12.5 24 5.87 18.627 0.5 12 0.5z"
+            ></path>
+          </svg>
+        </span>
+        <span class="sr-only">GitHub Repository</span>
+      </a>
     </footer>
 
     <div id="history-overlay" class="history-overlay" hidden>
-        <aside id="history-panel" class="history-panel" aria-label="历史记录弹窗" role="dialog" aria-modal="true" aria-labelledby="history-title">
-            <div class="history-panel-header">
-                <h2 id="history-title">历史记录</h2>
-                <div class="history-header-actions">
-                    <button id="history-clear-btn" class="history-action-btn" type="button">清空全部</button>
-                    <button id="history-close-btn" class="history-action-btn history-close-btn" type="button" aria-label="关闭历史记录">×</button>
-                </div>
-            </div>
-            <div id="history-list" class="history-list"></div>
-        </aside>
+      <aside
+        id="history-panel"
+        class="history-panel"
+        aria-label="历史记录弹窗"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="history-title"
+      >
+        <div class="history-panel-header">
+          <h2 id="history-title">历史记录</h2>
+          <div class="history-header-actions">
+            <button
+              id="history-clear-btn"
+              class="app-button history-action-btn"
+              type="button"
+            >
+              <span class="app-button__icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  focusable="false"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M4.5 7.5h15"></path>
+                  <path d="M9.5 3.5h5"></path>
+                  <path
+                    d="M8 7.5v11a1.5 1.5 0 0 0 1.5 1.5h5A1.5 1.5 0 0 0 16 18.5v-11"
+                  ></path>
+                  <path d="M10 10.5v5"></path>
+                  <path d="M14 10.5v5"></path>
+                </svg>
+              </span>
+              <span class="app-button__label">清空全部</span>
+            </button>
+            <button
+              id="history-close-btn"
+              class="app-button app-button--icon-only history-action-btn history-close-btn"
+              type="button"
+              aria-label="关闭历史记录"
+            >
+              <span class="app-button__icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  focusable="false"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m7 7 10 10"></path>
+                  <path d="M17 7 7 17"></path>
+                </svg>
+              </span>
+              <span class="sr-only">关闭历史记录</span>
+            </button>
+          </div>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </aside>
     </div>
 
     <script type="module" src="/src/main.ts"></script>
-</body>
+  </body>
 </html>
