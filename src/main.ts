@@ -4,6 +4,7 @@
  */
 
 import { VERSION, UI_TEXT } from './config';
+import { APP_LOCALE } from './locale';
 import {
   requireElement,
   downloadFile,
@@ -25,7 +26,11 @@ import {
   type HistoryEntry,
 } from './history';
 import { showConfirm, showErrorToast, showToast } from './feedback';
-import { renderButtonContent, setButtonContent } from './ui-icons';
+import {
+  renderButtonContent,
+  setButtonContent,
+  setIconOnlyButtonContent,
+} from './ui-icons';
 
 const SPLIT_PREVIEW_MIN_VIEWPORT = 1280;
 const PREVIEW_FOCUS_MIN_VIEWPORT = 1680;
@@ -40,9 +45,7 @@ function setupErrorBoundary(): void {
     console.error('全局错误:', { message, source, lineno, colno, error });
 
     if (import.meta.env.PROD) {
-      showErrorToast(
-        '应用发生错误，请刷新页面重试。如果问题持续存在，请联系技术支持。'
-      );
+      showErrorToast(UI_TEXT.ERRORS.APP_CRASH);
     }
 
     return false;
@@ -52,7 +55,7 @@ function setupErrorBoundary(): void {
     console.error('未处理的 Promise 拒绝:', event.reason);
 
     if (import.meta.env.PROD) {
-      showErrorToast('操作失败，请重试。');
+      showErrorToast(UI_TEXT.ERRORS.ACTION_FAILED);
     }
   };
 }
@@ -86,6 +89,110 @@ function canUseSplitPreview(): boolean {
 
 function canUsePreviewFocusLayout(): boolean {
   return window.innerWidth >= PREVIEW_FOCUS_MIN_VIEWPORT;
+}
+
+function applyShellLocale(
+  elements: {
+    textarea: HTMLTextAreaElement;
+    previewBtn: HTMLButtonElement;
+    downloadBtn: HTMLButtonElement;
+    previewIframe: HTMLIFrameElement;
+    splitActions: HTMLDivElement;
+    splitViewModes: HTMLDivElement;
+    splitViewBalancedBtn: HTMLButtonElement;
+    splitViewPreviewFocusBtn: HTMLButtonElement;
+    actionPagedPdf: HTMLButtonElement;
+    actionSinglePdf: HTMLButtonElement;
+    actionCopy: HTMLButtonElement;
+    actionLongImage: HTMLButtonElement;
+    actionNewTab: HTMLButtonElement;
+    historyToggleBtn: HTMLButtonElement;
+    historyPanel: HTMLElement;
+    historyTitle: HTMLElement;
+    historyClearBtn: HTMLButtonElement;
+    historyCloseBtn: HTMLButtonElement;
+    githubLink: HTMLAnchorElement;
+  }
+): void {
+  document.documentElement.lang = APP_LOCALE;
+  document.title = UI_TEXT.APP.TITLE;
+
+  elements.textarea.setAttribute('aria-label', UI_TEXT.EDITOR.ARIA_LABEL);
+  elements.textarea.placeholder = UI_TEXT.EDITOR.PLACEHOLDER;
+  elements.previewIframe.title = UI_TEXT.EDITOR.PREVIEW_FRAME_TITLE;
+  elements.splitActions.setAttribute('aria-label', UI_TEXT.EDITOR.SPLIT_ACTIONS_ARIA);
+  elements.splitViewModes.setAttribute(
+    'aria-label',
+    UI_TEXT.EDITOR.SPLIT_VIEW_GROUP_ARIA
+  );
+
+  setButtonContent(elements.previewBtn, 'preview', UI_TEXT.BUTTONS.PREVIEW);
+  setButtonContent(
+    elements.downloadBtn,
+    'markdown',
+    UI_TEXT.BUTTONS.DOWNLOAD_MARKDOWN
+  );
+  setButtonContent(
+    elements.actionPagedPdf,
+    'pagedPdf',
+    UI_TEXT.BUTTONS.PAGED_PDF
+  );
+  setButtonContent(
+    elements.actionSinglePdf,
+    'singlePage',
+    UI_TEXT.BUTTONS.SINGLE_PAGE_PDF
+  );
+  setButtonContent(
+    elements.actionCopy,
+    'copy',
+    UI_TEXT.BUTTONS.COPY_RICH_TEXT
+  );
+  setButtonContent(
+    elements.actionLongImage,
+    'image',
+    UI_TEXT.BUTTONS.EXPORT_LONG_IMAGE
+  );
+  setButtonContent(
+    elements.actionNewTab,
+    'external',
+    UI_TEXT.BUTTONS.NEW_TAB_PREVIEW
+  );
+
+  elements.splitViewBalancedBtn.title = UI_TEXT.SPLIT_VIEW.BALANCED_TITLE;
+  elements.splitViewPreviewFocusBtn.title = UI_TEXT.SPLIT_VIEW.PREVIEW_FOCUS_TITLE;
+  const balancedLabel =
+    elements.splitViewBalancedBtn.querySelector<HTMLElement>('.app-button__label');
+  if (balancedLabel) {
+    balancedLabel.textContent = UI_TEXT.SPLIT_VIEW.BALANCED_LABEL;
+  }
+  const previewFocusLabel =
+    elements.splitViewPreviewFocusBtn.querySelector<HTMLElement>(
+      '.app-button__label'
+    );
+  if (previewFocusLabel) {
+    previewFocusLabel.textContent = UI_TEXT.SPLIT_VIEW.PREVIEW_FOCUS_LABEL;
+  }
+
+  setIconOnlyButtonContent(
+    elements.historyToggleBtn,
+    'history',
+    UI_TEXT.BUTTONS.HISTORY
+  );
+  elements.historyToggleBtn.title = UI_TEXT.BUTTONS.HISTORY;
+  elements.historyPanel.setAttribute('aria-label', UI_TEXT.EDITOR.HISTORY_PANEL_ARIA);
+  elements.historyTitle.textContent = UI_TEXT.HISTORY.TITLE;
+  setButtonContent(elements.historyClearBtn, 'clear', UI_TEXT.BUTTONS.CLEAR_ALL);
+  setIconOnlyButtonContent(
+    elements.historyCloseBtn,
+    'close',
+    UI_TEXT.BUTTONS.CLOSE_HISTORY
+  );
+
+  elements.githubLink.setAttribute('aria-label', UI_TEXT.GITHUB.LABEL);
+  const githubLabel = elements.githubLink.querySelector('.sr-only');
+  if (githubLabel) {
+    githubLabel.textContent = UI_TEXT.GITHUB.LABEL;
+  }
 }
 
 function prefersReducedMotion(): boolean {
@@ -384,6 +491,20 @@ async function writeRichClipboardData(
 async function copySplitPreviewContent(
   iframe: HTMLIFrameElement
 ): Promise<boolean> {
+  const previewWindow = iframe.contentWindow as (Window & {
+    copyPreviewContent?: () => Promise<boolean>;
+  }) | null;
+  if (typeof previewWindow?.copyPreviewContent === 'function') {
+    try {
+      const copied = await previewWindow.copyPreviewContent();
+      if (copied) {
+        return true;
+      }
+    } catch (error) {
+      // Fall through to the legacy parent-document clipboard path.
+    }
+  }
+
   const contentArea = iframe.contentDocument?.getElementById(
     'preview-content-area'
   );
@@ -770,7 +891,7 @@ function initSplitPreview(
     editorPane.classList.remove('full-width');
     previewPane.hidden = false;
     splitActions.hidden = false;
-    setButtonContent(previewBtn, 'edit', '仅编辑');
+    setButtonContent(previewBtn, 'edit', UI_TEXT.BUTTONS.EDIT_ONLY);
     fullRender();
     applyLayoutMetrics();
     textarea.addEventListener('input', debouncedUpdate);
@@ -847,11 +968,13 @@ function initSplitPreview(
     previewPane.hidden = true;
     splitActions.hidden = true;
     if (canUseSplitPreview()) {
-      setButtonContent(previewBtn, 'preview', '分屏预览');
-      previewBtn.title = '打开分屏预览';
+      setButtonContent(previewBtn, 'preview', UI_TEXT.BUTTONS.SPLIT_PREVIEW);
+      previewBtn.title = UI_TEXT.BUTTONS.OPEN_SPLIT_TOOLTIP;
     } else {
-      setButtonContent(previewBtn, 'external', '新窗口预览');
-      previewBtn.title = `当前窗口较窄，将使用新窗口预览（至少 ${SPLIT_PREVIEW_MIN_VIEWPORT}px）`;
+      setButtonContent(previewBtn, 'external', UI_TEXT.BUTTONS.NEW_TAB_PREVIEW);
+      previewBtn.title = UI_TEXT.BUTTONS.NEW_TAB_PREVIEW_TOOLTIP(
+        SPLIT_PREVIEW_MIN_VIEWPORT
+      );
     }
     textarea.removeEventListener('input', debouncedUpdate);
     if (scrollSync) {
@@ -1039,7 +1162,7 @@ function renderHistoryList(
   onRestore: (entry: HistoryEntry) => Promise<void>
 ): void {
   if (!entries.length) {
-    listElement.innerHTML = '<p class="history-empty">暂无历史记录。</p>';
+    listElement.innerHTML = `<p class="history-empty">${UI_TEXT.HISTORY.EMPTY}</p>`;
     return;
   }
 
@@ -1054,12 +1177,12 @@ function renderHistoryList(
               <article class="history-item" data-entry-id="${entry.id}">
                 <div class="history-item-head">
                   <span>${formatTimeLabel(entry.createdAt)}</span>
-                  <span>草稿</span>
+                  <span>${UI_TEXT.HISTORY.DRAFT}</span>
                 </div>
                 <p class="history-item-preview">${getHistoryPreview(entry.content)}</p>
                 <div class="history-item-actions">
-                  <button class="app-button history-entry-btn" data-action="restore" data-entry-id="${entry.id}" type="button">${renderButtonContent('restore', '恢复')}</button>
-                  <button class="app-button history-entry-btn" data-action="delete" data-entry-id="${entry.id}" type="button">${renderButtonContent('delete', '删除')}</button>
+                  <button class="app-button history-entry-btn" data-action="restore" data-entry-id="${entry.id}" type="button">${renderButtonContent('restore', UI_TEXT.HISTORY.RESTORE)}</button>
+                  <button class="app-button history-entry-btn" data-action="delete" data-entry-id="${entry.id}" type="button">${renderButtonContent('delete', UI_TEXT.HISTORY.DELETE)}</button>
                 </div>
               </article>
             `
@@ -1107,9 +1230,9 @@ function renderHistoryList(
         }
 
         const shouldDelete = await showConfirm({
-          title: '删除记录',
-          message: '确定删除这条历史记录吗？',
-          confirmText: '删除',
+          title: UI_TEXT.HISTORY.DELETE_TITLE,
+          message: UI_TEXT.HISTORY.DELETE_MESSAGE,
+          confirmText: UI_TEXT.HISTORY.DELETE_CONFIRM,
         });
         if (!shouldDelete) {
           return;
@@ -1140,9 +1263,9 @@ function initHistory(
     historyCloseBtn.focus();
     renderHistoryList(historyList, loadHistoryEntries(), entry => {
       return showConfirm({
-        title: '恢复草稿',
-        message: '恢复该草稿将覆盖当前编辑内容，是否继续？',
-        confirmText: '恢复',
+        title: UI_TEXT.HISTORY.RESTORE_TITLE,
+        message: UI_TEXT.HISTORY.RESTORE_MESSAGE,
+        confirmText: UI_TEXT.HISTORY.RESTORE_CONFIRM,
       }).then(shouldRestore => {
         if (!shouldRestore) {
           return;
@@ -1177,9 +1300,9 @@ function initHistory(
 
   historyClearBtn.addEventListener('click', async () => {
     const shouldClear = await showConfirm({
-      title: '清空历史记录',
-      message: '确定清空全部历史记录吗？',
-      confirmText: '清空',
+      title: UI_TEXT.HISTORY.CLEAR_TITLE,
+      message: UI_TEXT.HISTORY.CLEAR_MESSAGE,
+      confirmText: UI_TEXT.HISTORY.CLEAR_CONFIRM,
     });
     if (!shouldClear) {
       return;
@@ -1215,6 +1338,8 @@ function initApp(): void {
   const previewPane = requireElement<HTMLDivElement>('preview-pane');
   const previewIframe = requireElement<HTMLIFrameElement>('preview-iframe');
   const splitActions = requireElement<HTMLDivElement>('split-actions');
+  const splitViewModes =
+    splitActions.querySelector<HTMLDivElement>('.split-view-modes');
 
   // Action bar buttons
   const actionPagedPdf = requireElement<HTMLButtonElement>('action-paged-pdf');
@@ -1230,13 +1355,48 @@ function initApp(): void {
   const splitViewPreviewFocusBtn = requireElement<HTMLButtonElement>(
     'split-view-preview-focus'
   );
+  const historyToggleBtn =
+    requireElement<HTMLButtonElement>('history-toggle-btn');
+  const historyPanel = requireElement<HTMLElement>('history-panel');
+  const historyTitle = requireElement<HTMLElement>('history-title');
+  const historyClearBtn = requireElement<HTMLButtonElement>('history-clear-btn');
+  const historyCloseBtn = requireElement<HTMLButtonElement>('history-close-btn');
+  const githubLink = document.querySelector<HTMLAnchorElement>(
+    'a[href="https://github.com/formyvibecoding/markdowneditor/tree/main"]'
+  );
+
+  if (!splitViewModes || !githubLink) {
+    throw new Error('Required localized shell elements are missing.');
+  }
+
+  applyShellLocale({
+    textarea: markdownInput,
+    previewBtn,
+    downloadBtn,
+    previewIframe,
+    splitActions,
+    splitViewModes,
+    splitViewBalancedBtn,
+    splitViewPreviewFocusBtn,
+    actionPagedPdf,
+    actionSinglePdf,
+    actionCopy,
+    actionLongImage,
+    actionNewTab,
+    historyToggleBtn,
+    historyPanel,
+    historyTitle,
+    historyClearBtn,
+    historyCloseBtn,
+    githubLink,
+  });
 
   markdownInput.value = '';
 
   const platformInfo = getPlatformInfo();
   const modKey = platformInfo.isMac ? '⌘' : 'Ctrl+';
-  downloadBtn.title = `下载 MD（${modKey}Enter）`;
-  previewBtn.title = `预览（${modKey}P）`;
+  downloadBtn.title = UI_TEXT.BUTTONS.DOWNLOAD_MARKDOWN_TOOLTIP(modKey);
+  previewBtn.title = UI_TEXT.BUTTONS.PREVIEW_TOOLTIP(modKey);
 
   const splitPreview = initSplitPreview(
     markdownInput,
@@ -1270,14 +1430,16 @@ function initApp(): void {
 
   const updatePreviewBtnLabel = (): void => {
     if (splitPreview.isOpen()) {
-      setButtonContent(previewBtn, 'edit', '仅编辑');
-      previewBtn.title = '仅编辑';
+      setButtonContent(previewBtn, 'edit', UI_TEXT.BUTTONS.EDIT_ONLY);
+      previewBtn.title = UI_TEXT.BUTTONS.EDIT_ONLY;
     } else if (canUseSplitPreview()) {
-      setButtonContent(previewBtn, 'preview', '分屏预览');
-      previewBtn.title = '打开分屏预览';
+      setButtonContent(previewBtn, 'preview', UI_TEXT.BUTTONS.SPLIT_PREVIEW);
+      previewBtn.title = UI_TEXT.BUTTONS.OPEN_SPLIT_TOOLTIP;
     } else {
-      setButtonContent(previewBtn, 'external', '新窗口预览');
-      previewBtn.title = `当前窗口较窄，将使用新窗口预览（至少 ${SPLIT_PREVIEW_MIN_VIEWPORT}px）`;
+      setButtonContent(previewBtn, 'external', UI_TEXT.BUTTONS.NEW_TAB_PREVIEW);
+      previewBtn.title = UI_TEXT.BUTTONS.NEW_TAB_PREVIEW_TOOLTIP(
+        SPLIT_PREVIEW_MIN_VIEWPORT
+      );
     }
   };
 
@@ -1288,16 +1450,16 @@ function initApp(): void {
 
     splitViewPreviewFocusBtn.disabled = !previewFocusAllowed;
     splitViewPreviewFocusBtn.title = previewFocusAllowed
-      ? '保持编辑区不变，扩张预览区到两倍宽'
-      : `当前窗口宽度不足，至少 ${PREVIEW_FOCUS_MIN_VIEWPORT}px 可使用 1:2 视图`;
+      ? UI_TEXT.SPLIT_VIEW.PREVIEW_FOCUS_TITLE
+      : UI_TEXT.SPLIT_VIEW.PREVIEW_FOCUS_UNAVAILABLE(
+          PREVIEW_FOCUS_MIN_VIEWPORT
+        );
 
     if (!splitAllowed && isSplitPreviewOpen) {
       splitPreview.close();
       setSplitViewButtonState('balanced');
       if (announce && lastCanUseSplitPreview) {
-        showToast(
-          `窗口宽度不足，已退出分屏预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px，请使用新窗口预览。`
-        );
+        showToast(UI_TEXT.SPLIT_VIEW.SPLIT_EXITED(SPLIT_PREVIEW_MIN_VIEWPORT));
       }
     } else if (
       !previewFocusAllowed &&
@@ -1306,9 +1468,7 @@ function initApp(): void {
       splitPreview.setSystemLayoutMode('balanced');
       setSplitViewButtonState('balanced');
       if (announce && lastCanUsePreviewFocus && isSplitPreviewOpen) {
-        showToast(
-          `窗口宽度不足，已切回 1:1 视图。1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`
-        );
+        showToast(UI_TEXT.SPLIT_VIEW.PREVIEW_FOCUS_RESET(PREVIEW_FOCUS_MIN_VIEWPORT));
       }
     }
 
@@ -1339,9 +1499,7 @@ function initApp(): void {
     if (!canUseSplitPreview()) {
       const opened = splitPreview.openInNewTab();
       if (opened) {
-        showToast(
-          `当前窗口宽度不足，已改为新窗口预览。分屏至少需要 ${SPLIT_PREVIEW_MIN_VIEWPORT}px。`
-        );
+        showToast(UI_TEXT.SPLIT_VIEW.FORCED_NEW_TAB(SPLIT_PREVIEW_MIN_VIEWPORT));
       }
       return;
     }
@@ -1364,12 +1522,12 @@ function initApp(): void {
       return;
     }
 
-    setButtonContent(actionCopy, 'check', '已复制');
+    setButtonContent(actionCopy, 'check', UI_TEXT.BUTTONS.COPY_RICH_TEXT_COPIED);
     if (actionCopyResetTimer !== null) {
       window.clearTimeout(actionCopyResetTimer);
     }
     actionCopyResetTimer = window.setTimeout(() => {
-      setButtonContent(actionCopy, 'copy', '复制富文本');
+      setButtonContent(actionCopy, 'copy', UI_TEXT.BUTTONS.COPY_RICH_TEXT);
       actionCopyResetTimer = null;
     }, 1500);
   });
@@ -1392,7 +1550,9 @@ function initApp(): void {
   splitViewPreviewFocusBtn.addEventListener('click', () => {
     if (!canUsePreviewFocusLayout()) {
       showToast(
-        `当前窗口宽度不足，1:2 视图至少需要 ${PREVIEW_FOCUS_MIN_VIEWPORT}px。`
+        UI_TEXT.SPLIT_VIEW.PREVIEW_FOCUS_TOO_NARROW(
+          PREVIEW_FOCUS_MIN_VIEWPORT
+        )
       );
       return;
     }
@@ -1417,7 +1577,7 @@ function initApp(): void {
   });
 
   if (import.meta.env.DEV) {
-    console.log(`Markdown 编辑器 v${VERSION} 已初始化`);
+    console.log(`${UI_TEXT.APP.TITLE} v${VERSION} initialized`);
   }
 }
 

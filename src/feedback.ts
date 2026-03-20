@@ -3,6 +3,7 @@ import {
   renderIconOnlyButtonContent,
   setIconOnlyButtonContent,
 } from './ui-icons';
+import { UI_TEXT } from './config';
 
 export interface ToastOptions {
   type?: 'info' | 'success' | 'error';
@@ -42,7 +43,11 @@ export function showToast(message: string, options: ToastOptions = {}): void {
   const tone = document.createElement('span');
   tone.className = 'app-toast-tone';
   tone.textContent =
-    type === 'error' ? '注意' : type === 'success' ? '完成' : '提示';
+    type === 'error'
+      ? UI_TEXT.FEEDBACK.TOAST_ERROR
+      : type === 'success'
+        ? UI_TEXT.FEEDBACK.TOAST_SUCCESS
+        : UI_TEXT.FEEDBACK.TOAST_INFO;
 
   const text = document.createElement('p');
   text.className = 'app-toast-message';
@@ -56,8 +61,8 @@ export function showToast(message: string, options: ToastOptions = {}): void {
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'app-button app-button--icon-only app-toast-close';
-  closeBtn.setAttribute('aria-label', '关闭通知');
-  setIconOnlyButtonContent(closeBtn, 'close', '关闭通知');
+  closeBtn.setAttribute('aria-label', UI_TEXT.FEEDBACK.CLOSE_NOTIFICATION);
+  setIconOnlyButtonContent(closeBtn, 'close', UI_TEXT.FEEDBACK.CLOSE_NOTIFICATION);
 
   toast.appendChild(content);
   toast.appendChild(closeBtn);
@@ -92,10 +97,10 @@ export function showConfirm(options: ConfirmOptions): Promise<boolean> {
 
   return new Promise(resolve => {
     const {
-      title = '请确认操作',
+      title = UI_TEXT.FEEDBACK.DEFAULT_CONFIRM_TITLE,
       message,
-      confirmText = '确定',
-      cancelText = '取消',
+      confirmText = UI_TEXT.FEEDBACK.DEFAULT_CONFIRM_TEXT,
+      cancelText = UI_TEXT.FEEDBACK.DEFAULT_CANCEL_TEXT,
     } = options;
 
     const previousActive = document.activeElement as HTMLElement | null;
@@ -111,7 +116,7 @@ export function showConfirm(options: ConfirmOptions): Promise<boolean> {
     dialog.innerHTML = `
       <header class="app-modal-header">
         <h2 id="app-confirm-title">${title}</h2>
-        <button type="button" class="app-button app-button--icon-only app-modal-close" aria-label="关闭">${renderIconOnlyButtonContent('close', '关闭')}</button>
+        <button type="button" class="app-button app-button--icon-only app-modal-close" aria-label="${UI_TEXT.FEEDBACK.CLOSE}">${renderIconOnlyButtonContent('close', UI_TEXT.FEEDBACK.CLOSE)}</button>
       </header>
       <p class="app-modal-message"></p>
       <footer class="app-modal-actions">

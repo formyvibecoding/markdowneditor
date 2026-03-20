@@ -1,3 +1,5 @@
+import { APP_LOCALE } from './locale';
+
 export type HistoryEntryType = 'draft';
 
 export interface HistoryEntry {
@@ -22,6 +24,22 @@ const MAX_HISTORY_ITEMS = 300;
 const MERGE_WINDOW_MS = 3 * 60 * 1000;
 const MIN_MEANINGFUL_DIFF = 20;
 const SIMILARITY_THRESHOLD = 0.92;
+
+const monthLabelFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
+  year: 'numeric',
+  month: 'long',
+});
+
+const dayLabelFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
+  month: 'short',
+  day: 'numeric',
+});
+
+const timeLabelFormatter = new Intl.DateTimeFormat(APP_LOCALE, {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
 
 function safeParse(value: string | null): HistoryEntry[] {
   if (!value) {
@@ -177,23 +195,20 @@ export function clearHistoryEntries(): void {
 }
 
 export function formatMonthLabel(monthKey: string): string {
-  const [year, month] = monthKey.split('-').map(Number);
-  return `${year}年${month}月`;
+  const [yearValue, monthValue] = monthKey.split('-');
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  return monthLabelFormatter.format(new Date(year, month - 1, 1));
 }
 
 export function formatDayLabel(dayKey: string): string {
   const date = new Date(`${dayKey}T00:00:00`);
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
+  return dayLabelFormatter.format(date);
 }
 
 export function formatTimeLabel(isoTime: string): string {
   const date = new Date(isoTime);
-  return date.toLocaleTimeString('zh-CN', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  return timeLabelFormatter.format(date);
 }
 
 export function groupHistoryEntries(entries: HistoryEntry[]): MonthGroup[] {

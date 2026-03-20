@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Markdown 编辑器</title>
+    <title>Markdown Editor</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
@@ -30,7 +30,7 @@
               <path d="M13.5 15.5h5.5"></path>
             </svg>
           </span>
-          <span class="app-button__label">预览</span>
+          <span class="app-button__label">Preview</span>
         </button>
         <button
           id="download-markdown-btn"
@@ -53,7 +53,7 @@
               <path d="m13.75 12.75 1.75 1.75 1.75-1.75"></path>
             </svg>
           </span>
-          <span class="app-button__label">下载 MD</span>
+          <span class="app-button__label">Download Markdown</span>
         </button>
       </div>
       <div class="editor-container single-pane" id="editor-container">
@@ -61,8 +61,8 @@
           <div class="editor-content">
             <textarea
               id="markdown-input"
-              aria-label="Markdown 编辑区"
-              placeholder="在这里输入 Markdown 内容..."
+              aria-label="Markdown editor"
+              placeholder="Write Markdown here..."
             ></textarea>
           </div>
         </div>
@@ -70,18 +70,18 @@
           <iframe
             id="preview-iframe"
             class="preview-iframe"
-            title="Markdown 预览"
+            title="Markdown preview"
           ></iframe>
         </div>
       </div>
-      <div class="split-actions" id="split-actions" hidden role="toolbar" aria-label="预览操作">
-        <div class="split-view-modes" role="group" aria-label="预览视图比例">
+      <div class="split-actions" id="split-actions" hidden role="toolbar" aria-label="Preview actions">
+        <div class="split-view-modes" role="group" aria-label="Preview layout">
           <button
             class="app-button split-view-btn is-active"
             id="split-view-balanced"
             type="button"
             aria-pressed="true"
-            title="编辑区与预览区等宽"
+            title="Editor and preview use equal width"
           >
             <span class="app-button__icon" aria-hidden="true">
               <svg
@@ -104,7 +104,7 @@
             id="split-view-preview-focus"
             type="button"
             aria-pressed="false"
-            title="保持编辑区不变，扩张预览区到两倍宽"
+            title="Keep editor width unchanged and expand preview to twice the width"
           >
             <span class="app-button__icon" aria-hidden="true">
               <svg
@@ -146,7 +146,7 @@
               <path d="M9 16h4.5"></path>
             </svg>
           </span>
-          <span class="app-button__label">下载 PDF（分页）</span>
+          <span class="app-button__label">Export PDF (paged)</span>
         </button>
         <button
           class="app-button split-action-btn"
@@ -172,7 +172,7 @@
               <path d="M17 15.5h2.5"></path>
             </svg>
           </span>
-          <span class="app-button__label">下载 PDF（单页）</span>
+          <span class="app-button__label">Save PDF (single page)</span>
         </button>
         <button
           class="app-button split-action-btn"
@@ -195,7 +195,7 @@
               ></path>
             </svg>
           </span>
-          <span class="app-button__label">复制富文本</span>
+          <span class="app-button__label">Copy rich text</span>
         </button>
         <button
           class="app-button split-action-btn"
@@ -217,7 +217,7 @@
               <path d="m6.5 17 4.5-4.5 3.5 3.5 2.5-2.5 3 3"></path>
             </svg>
           </span>
-          <span class="app-button__label">导出长图</span>
+          <span class="app-button__label">Export long image</span>
         </button>
         <button
           class="app-button split-action-btn"
@@ -241,7 +241,7 @@
               ></path>
             </svg>
           </span>
-          <span class="app-button__label">新页面预览</span>
+          <span class="app-button__label">New tab preview</span>
         </button>
       </div>
     </div>
@@ -249,8 +249,8 @@
       <button
         id="history-toggle-btn"
         class="app-button app-button--icon-only footer-link"
-        aria-label="历史记录"
-        title="历史记录"
+        aria-label="History"
+        title="History"
         type="button"
       >
         <span class="app-button__icon" aria-hidden="true">
@@ -268,7 +268,7 @@
             <path d="M12 8.5V12l2.75 1.75"></path>
           </svg>
         </span>
-        <span class="sr-only">历史记录</span>
+        <span class="sr-only">History</span>
       </button>
       <a
         class="app-button app-button--icon-only footer-link"
@@ -292,13 +292,13 @@
       <aside
         id="history-panel"
         class="history-panel"
-        aria-label="历史记录弹窗"
+        aria-label="History panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby="history-title"
       >
         <div class="history-panel-header">
-          <h2 id="history-title">历史记录</h2>
+          <h2 id="history-title">History</h2>
           <div class="history-header-actions">
             <button
               id="history-clear-btn"
@@ -324,13 +324,13 @@
                   <path d="M14 10.5v5"></path>
                 </svg>
               </span>
-              <span class="app-button__label">清空全部</span>
+              <span class="app-button__label">Clear all</span>
             </button>
             <button
               id="history-close-btn"
               class="app-button app-button--icon-only history-action-btn history-close-btn"
               type="button"
-              aria-label="关闭历史记录"
+              aria-label="Close history"
             >
               <span class="app-button__icon" aria-hidden="true">
                 <svg
@@ -346,7 +346,7 @@
                   <path d="M17 7 7 17"></path>
                 </svg>
               </span>
-              <span class="sr-only">关闭历史记录</span>
+              <span class="sr-only">Close history</span>
             </button>
           </div>
         </div>

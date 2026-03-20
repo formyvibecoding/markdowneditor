@@ -1,3 +1,5 @@
+import { APP_LOCALE, getLocaleMessages } from './locale';
+
 /**
  * Markdown 编辑器配置模块
  * 集中管理所有常量和配置
@@ -43,40 +45,7 @@ export const PDF_CONFIG = {
 // =============================================================================
 // UI 文案配置
 // =============================================================================
-export const UI_TEXT = {
-  /** PDF 按钮文案 */
-  PDF_BUTTONS: {
-    PAGED: '下载 PDF（分页）',
-    PAGED_LOADING: '正在生成...',
-    SINGLE: '保存 PDF（单页）',
-    SINGLE_PREPARING: '正在准备打印...',
-  },
-  /** 预览复制按钮文案 */
-  COPY_BUTTONS: {
-    COPY: '复制预览',
-    COPYING: '正在复制...',
-    COPIED: '已复制',
-  },
-  /** 长图按钮文案 */
-  LONG_IMAGE_BUTTONS: {
-    DEFAULT: '导出长图',
-    RENDERING: '正在渲染...',
-    GENERATING: '正在生成图片...',
-  },
-  /** 错误提示 */
-  ERRORS: {
-    EMPTY_CONTENT: '编辑器内容为空，无法下载。',
-    EMPTY_CONTENT_PREVIEW: '请先输入内容，再进行预览。',
-    POPUP_BLOCKED: '无法打开新标签页，请检查浏览器设置是否阻止了弹出窗口。',
-    PDF_GENERATION_FAILED: '生成 PDF 时出错',
-    PDF_INIT_FAILED: '初始化 PDF 生成器出错',
-    CORS_ERROR: '可能存在跨域图片加载问题，请检查浏览器控制台。',
-    COPY_FAILED: '复制失败，请检查浏览器权限后重试。',
-  },
-  /** 页码格式 */
-  PAGE_NUMBER_FORMAT: (current: number, total: number): string =>
-    `${current} / ${total}`,
-} as const;
+export const UI_TEXT = getLocaleMessages(APP_LOCALE);
 
 // =============================================================================
 // 样式配置
@@ -149,4 +118,3 @@ export const MARKED_OPTIONS = {
   breaks: true,
   pedantic: false,
 } as const;
-

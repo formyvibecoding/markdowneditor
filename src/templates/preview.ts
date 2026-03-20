@@ -11,6 +11,7 @@ import {
   PDF_CONFIG,
   LONG_IMAGE,
 } from '../config';
+import { APP_LOCALE } from '../locale';
 import { BUTTON_ICONS, renderButtonContent } from '../ui-icons';
 
 // =============================================================================
@@ -212,9 +213,9 @@ body {
     break-after: avoid-page;
     page-break-after: avoid;
   }
-  h1 {
-    break-before: page;
-    page-break-before: page;
+  h1, h2, h3, h4, h5, h6 {
+    break-before: auto;
+    page-break-before: auto;
   }
 }
 
@@ -481,6 +482,30 @@ body {
 }
 `;
 
+const previewScriptUI = JSON.stringify({
+  PAGED: UI_TEXT.PDF_BUTTONS.PAGED,
+  PAGED_LOADING: UI_TEXT.PDF_BUTTONS.PAGED_LOADING,
+  SINGLE: UI_TEXT.PDF_BUTTONS.SINGLE,
+  SINGLE_PREPARING: UI_TEXT.PDF_BUTTONS.SINGLE_PREPARING,
+  COPY: UI_TEXT.COPY_BUTTONS.COPY,
+  COPYING: UI_TEXT.COPY_BUTTONS.COPYING,
+  COPIED: UI_TEXT.COPY_BUTTONS.COPIED,
+  COPY_FAILED: UI_TEXT.ERRORS.COPY_FAILED,
+  COPY_TABLE: UI_TEXT.PREVIEW_TOOLS.COPY_TABLE,
+  COPY_CODE: UI_TEXT.PREVIEW_TOOLS.COPY_CODE,
+  COPY_COLOR_VALUE_PREFIX: UI_TEXT.PREVIEW_TOOLS.COPY_COLOR_VALUE_PREFIX,
+  PDF_GENERATION_FAILED_PREFIX: UI_TEXT.PREVIEW_TOOLS.PDF_GENERATION_FAILED_PREFIX,
+  PRINT_PREPARATION_FAILED_PREFIX:
+    UI_TEXT.PREVIEW_TOOLS.PRINT_PREPARATION_FAILED_PREFIX,
+  IMAGE_GENERATION_FAILED: UI_TEXT.PREVIEW_TOOLS.IMAGE_GENERATION_FAILED,
+  LONG_IMAGE_EXPORT_FAILED_PREFIX:
+    UI_TEXT.PREVIEW_TOOLS.LONG_IMAGE_EXPORT_FAILED_PREFIX,
+  LONG_IMAGE_DEFAULT: UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT,
+  LONG_IMAGE_RENDERING: UI_TEXT.LONG_IMAGE_BUTTONS.RENDERING,
+  LONG_IMAGE_GENERATING: UI_TEXT.LONG_IMAGE_BUTTONS.GENERATING,
+  PREVIEW_FALLBACK_TITLE: UI_TEXT.APP.PREVIEW_FALLBACK_TITLE,
+});
+
 // =============================================================================
 // JavaScript 代码模板
 // =============================================================================
@@ -494,25 +519,22 @@ const copyBtn = document.getElementById('copy-preview-btn');
 
 // 配置常量
 const A4_WIDTH_MM = ${A4.WIDTH_MM};
-const A4_CONTENT_WIDTH_PX = ${A4.CONTENT_WIDTH_PX};
-const IMAGE_QUALITY = ${PDF_CONFIG.IMAGE_QUALITY};
-const SCALE = ${PDF_CONFIG.SCALE};
+const A4_HEIGHT_MM = ${A4.HEIGHT_MM};
+const PAGED_MARGINS = ${JSON.stringify(PDF_CONFIG.PAGED_MARGINS)};
+const PAGED_FILENAME_TITLE = ${JSON.stringify(
+  PDF_CONFIG.PAGED_FILENAME.replace(/\.pdf$/i, '')
+)};
+const SINGLE_PAGE_FILENAME_TITLE = ${JSON.stringify(
+  PDF_CONFIG.SINGLE_PAGE_FILENAME.replace(/\.pdf$/i, '')
+)};
 
 // UI 文案
-const UI_TEXT = {
-  PAGED: '${UI_TEXT.PDF_BUTTONS.PAGED}',
-  PAGED_LOADING: '${UI_TEXT.PDF_BUTTONS.PAGED_LOADING}',
-  SINGLE: '${UI_TEXT.PDF_BUTTONS.SINGLE}',
-  SINGLE_PREPARING: '${UI_TEXT.PDF_BUTTONS.SINGLE_PREPARING}',
-  COPY: '${UI_TEXT.COPY_BUTTONS.COPY}',
-  COPYING: '${UI_TEXT.COPY_BUTTONS.COPYING}',
-  COPIED: '${UI_TEXT.COPY_BUTTONS.COPIED}',
-  COPY_FAILED: '${UI_TEXT.ERRORS.COPY_FAILED}',
-};
+const UI_TEXT = ${previewScriptUI};
 
 const INITIAL_IMAGE_WIDTH_STATE = __IMAGE_WIDTH_STATE__;
 
 const BUTTON_ICONS = ${JSON.stringify(BUTTON_ICONS)};
+const PRINT_STYLE_ID = 'markdown-preview-print-css';
 
 function escapeHtml(value) {
   return value
@@ -536,8 +558,6 @@ function setButtonContent(button, icon, label) {
 // Vendor 资源（本地打包）
 const VENDOR = {
   html2canvas: ${JSON.stringify(VENDOR_RESOURCES.HTML2CANVAS)},
-  jspdf: ${JSON.stringify(VENDOR_RESOURCES.JSPDF)},
-  html2pdf: ${JSON.stringify(VENDOR_RESOURCES.HTML2PDF)},
 };
 
 // 加载脚本（本地 vendor）
@@ -563,11 +583,7 @@ async function loadScript(urls) {
 let libsLoaded = false;
 async function ensureLibs() {
   if (libsLoaded) return;
-  await Promise.all([
-    loadScript(VENDOR.html2canvas),
-    loadScript(VENDOR.jspdf),
-    loadScript(VENDOR.html2pdf),
-  ]);
+  await Promise.all([loadScript(VENDOR.html2canvas)]);
   libsLoaded = true;
 }
 
@@ -630,6 +646,58 @@ function restoreCheckboxAttributes(states) {
       input.setAttribute('checked', '');
     } else {
       input.removeAttribute('checked');
+    }
+  });
+}
+
+function cleanupPrintArtifacts(previousTitle, fallbackTimer) {
+  const existingStyle = document.getElementById(PRINT_STYLE_ID);
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+  document.title = previousTitle;
+  if (typeof fallbackTimer === 'number') {
+    window.clearTimeout(fallbackTimer);
+  }
+  enableButtons();
+}
+
+function runPrintJob(options) {
+  const { title, styleText, loadingLabel } = options;
+  disableButtons(loadingLabel);
+
+  const existingStyle = document.getElementById(PRINT_STYLE_ID);
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+
+  const previousTitle = document.title;
+  document.title = title;
+
+  const printStyle = document.createElement('style');
+  printStyle.id = PRINT_STYLE_ID;
+  printStyle.textContent = styleText;
+  document.head.appendChild(printStyle);
+
+  let cleanedUp = false;
+  let fallbackTimer = null;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    window.removeEventListener('afterprint', cleanup);
+    cleanupPrintArtifacts(previousTitle, fallbackTimer);
+  };
+
+  window.addEventListener('afterprint', cleanup);
+  fallbackTimer = window.setTimeout(cleanup, 2000);
+
+  requestAnimationFrame(() => {
+    try {
+      window.print();
+    } catch (err) {
+      cleanup();
+      console.error('Print execution failed:', err);
+      showErrorToast(UI_TEXT.PRINT_PREPARATION_FAILED_PREFIX + (err.message || err));
     }
   });
 }
@@ -1006,8 +1074,8 @@ function wrapTablesWithCopyButton() {
     const copyTableButton = document.createElement('button');
     copyTableButton.className = 'table-copy-btn';
     copyTableButton.type = 'button';
-    copyTableButton.setAttribute('aria-label', '复制表格');
-    setButtonContent(copyTableButton, 'table', '复制表格');
+    copyTableButton.setAttribute('aria-label', UI_TEXT.COPY_TABLE);
+    setButtonContent(copyTableButton, 'table', UI_TEXT.COPY_TABLE);
 
     copyTableButton.addEventListener('click', async (event) => {
       event.preventDefault();
@@ -1038,10 +1106,10 @@ function wrapTablesWithCopyButton() {
         return;
       }
 
-      setButtonContent(copyTableButton, 'check', '已复制');
+      setButtonContent(copyTableButton, 'check', UI_TEXT.COPIED);
       copyTableButton.disabled = true;
       setTimeout(() => {
-        setButtonContent(copyTableButton, 'table', '复制表格');
+        setButtonContent(copyTableButton, 'table', UI_TEXT.COPY_TABLE);
         copyTableButton.disabled = false;
       }, 1200);
     });
@@ -1065,8 +1133,8 @@ function wrapCodeBlocksWithCopyButton() {
     const copyCodeButton = document.createElement('button');
     copyCodeButton.className = 'code-copy-btn';
     copyCodeButton.type = 'button';
-    copyCodeButton.setAttribute('aria-label', '复制代码');
-    setButtonContent(copyCodeButton, 'code', '复制代码');
+    copyCodeButton.setAttribute('aria-label', UI_TEXT.COPY_CODE);
+    setButtonContent(copyCodeButton, 'code', UI_TEXT.COPY_CODE);
 
     copyCodeButton.addEventListener('click', async (event) => {
       event.preventDefault();
@@ -1089,10 +1157,10 @@ function wrapCodeBlocksWithCopyButton() {
         return;
       }
 
-      setButtonContent(copyCodeButton, 'check', '已复制');
+      setButtonContent(copyCodeButton, 'check', UI_TEXT.COPIED);
       copyCodeButton.disabled = true;
       setTimeout(() => {
-        setButtonContent(copyCodeButton, 'code', '复制代码');
+        setButtonContent(copyCodeButton, 'code', UI_TEXT.COPY_CODE);
         copyCodeButton.disabled = false;
       }, 1200);
     });
@@ -1107,8 +1175,8 @@ function createColorSwatchButton(colorCode) {
   const button = document.createElement('button');
   button.className = 'color-swatch-btn';
   button.type = 'button';
-  button.setAttribute('title', '点击复制颜色值 ' + colorCode);
-  button.setAttribute('aria-label', '复制颜色值 ' + colorCode);
+  button.setAttribute('title', UI_TEXT.COPY_COLOR_VALUE_PREFIX + colorCode);
+  button.setAttribute('aria-label', UI_TEXT.COPY_COLOR_VALUE_PREFIX + colorCode);
 
   const svgNs = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNs, 'svg');
@@ -1227,14 +1295,14 @@ function buildClipboardPayload(container) {
 }
 
 async function copyPreviewContent() {
-  if (!copyBtn || !contentArea) return;
+  if (!copyBtn || !contentArea) return false;
   setCopyButtonState(UI_TEXT.COPYING, true);
 
   const selection = window.getSelection();
   if (!selection) {
     showErrorToast(UI_TEXT.COPY_FAILED);
     setCopyButtonState(UI_TEXT.COPY, false);
-    return;
+    return false;
   }
 
   const previousRanges = [];
@@ -1244,6 +1312,17 @@ async function copyPreviewContent() {
 
   const checkboxStates = syncCheckboxAttributes(contentArea);
   const { html, text } = buildClipboardPayload(contentArea);
+  const copyUsingSelection = () => {
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(contentArea);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return document.execCommand('copy');
+    } catch (err) {
+      return false;
+    }
+  };
 
   let success = false;
   try {
@@ -1256,14 +1335,10 @@ async function copyPreviewContent() {
       ]);
       success = true;
     } else {
-      const range = document.createRange();
-      range.selectNodeContents(contentArea);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      success = document.execCommand('copy');
+      success = copyUsingSelection();
     }
   } catch (err) {
-    success = false;
+    success = copyUsingSelection();
   } finally {
     restoreSelection(selection, previousRanges);
     restoreCheckboxAttributes(checkboxStates);
@@ -1272,95 +1347,65 @@ async function copyPreviewContent() {
   if (!success) {
     showErrorToast(UI_TEXT.COPY_FAILED);
     setCopyButtonState(UI_TEXT.COPY, false);
-    return;
+    return false;
   }
 
   setCopyButtonState(UI_TEXT.COPIED, true);
   setTimeout(() => {
     setCopyButtonState(UI_TEXT.COPY, false);
   }, 1500);
+  return true;
 }
 
-// 分页 PDF 生成
-pagedBtn.addEventListener('click', async () => {
-  disableButtons(UI_TEXT.PAGED_LOADING);
-  const originalStyle = contentArea.getAttribute('style') || '';
-
+// 分页 PDF：改用浏览器原生打印，避免 html2canvas 位图切页导致切字
+pagedBtn.addEventListener('click', () => {
   try {
-    await ensureLibs();
-
-    contentArea.style.width = A4_CONTENT_WIDTH_PX + 'px';
-    contentArea.style.margin = '0 auto';
-    contentArea.style.padding = '10mm';
-
-    const opt = {
-      margin: [${PDF_CONFIG.PAGED_MARGINS.join(', ')}],
-      filename: '${PDF_CONFIG.PAGED_FILENAME}',
-      image: { type: 'jpeg', quality: IMAGE_QUALITY },
-      enableLinks: true,
-      html2canvas: {
-        scale: SCALE,
-        useCORS: true,
-        logging: false,
-        letterRendering: true,
-        allowTaint: false,
-      },
-      jsPDF: {
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait',
-        compress: true,
-      },
-      pagebreak: {
-        mode: ['avoid-all', 'css', 'legacy'],
-        before: '.page-break-before',
-        after: '.page-break-after',
-        avoid: ['img', 'svg', 'canvas', 'table', 'tr', 'th', 'td', 'pre', 'code', 'blockquote', 'figure', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'dd', 'dt', 'br', '.avoid-page-break'],
-      },
-    };
-
-    await html2pdf()
-      .from(contentArea)
-      .set(opt)
-      .toPdf()
-      .get('pdf')
-      .then((pdf) => {
-        const totalPages = pdf.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          pdf.setPage(i);
-          pdf.setFontSize(${STYLES.PAGE_NUMBER_FONT_SIZE});
-          pdf.setTextColor(${STYLES.COLORS.PAGE_NUMBER.R}, ${STYLES.COLORS.PAGE_NUMBER.G}, ${STYLES.COLORS.PAGE_NUMBER.B});
-          pdf.text(
-            '' + i + ' / ' + totalPages,
-            pdf.internal.pageSize.getWidth() - 30,
-            pdf.internal.pageSize.getHeight() - 8
-          );
-        }
-        return pdf;
-      })
-      .save();
+    runPrintJob({
+      title: PAGED_FILENAME_TITLE,
+      loadingLabel: UI_TEXT.PAGED_LOADING,
+      styleText: [
+        '@page { size: ' + A4_WIDTH_MM + 'mm ' + A4_HEIGHT_MM + 'mm; margin: '
+          + PAGED_MARGINS[0] + 'mm ' + PAGED_MARGINS[1] + 'mm '
+          + PAGED_MARGINS[2] + 'mm ' + PAGED_MARGINS[3] + 'mm; }',
+        '@media print {',
+        '  h1, h2, h3, h4, h5, h6,',
+        '  img, table, pre, figure, blockquote,',
+        '  ul, ol, dl {',
+        '    break-inside: avoid-page !important;',
+        '    page-break-inside: avoid !important;',
+        '  }',
+        '  h1, h2 {',
+        '    break-after: avoid-page !important;',
+        '    page-break-after: avoid !important;',
+        '  }',
+        '  h1, h2, h3, h4, h5, h6 {',
+        '    break-before: auto !important;',
+        '    page-break-before: auto !important;',
+        '  }',
+        '}',
+      ].join(''),
+    });
   } catch (err) {
-    console.error('PDF 生成失败:', err);
-    showErrorToast('生成 PDF 时出错: ' + err.message);
-  } finally {
-    contentArea.setAttribute('style', originalStyle);
+    console.error('Paged print preparation failed:', err);
+    showErrorToast(UI_TEXT.PRINT_PREPARATION_FAILED_PREFIX + (err.message || err));
     enableButtons();
   }
 });
 
 // 单页 PDF（window.print 真实文字 PDF）
 singleBtn.addEventListener('click', () => {
-  singleBtn.disabled = true;
-  setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE_PREPARING);
-
   try {
+    const PX_TO_MM = 0.264583;
+    const marginMm = 15;
+    const printableWidthPx = Math.floor((A4_WIDTH_MM - marginMm * 2) / PX_TO_MM);
+
     // 创建隐藏克隆以在打印宽度下测量内容高度
     const clone = contentArea.cloneNode(true);
     clone.style.position = 'absolute';
     clone.style.left = '-99999px';
     clone.style.top = '0';
-    clone.style.width = '680px'; // 180mm (A4 210mm - 15mm*2 margin) at 96dpi
-    clone.style.maxWidth = '680px';
+    clone.style.width = printableWidthPx + 'px';
+    clone.style.maxWidth = printableWidthPx + 'px';
     clone.style.padding = '0';
     clone.style.margin = '0';
     clone.style.boxShadow = 'none';
@@ -1371,53 +1416,38 @@ singleBtn.addEventListener('click', () => {
     const contentHeightPx = clone.scrollHeight;
     document.body.removeChild(clone);
 
-    // px → mm 转换 (1 CSS px = 1/96 inch = 0.264583mm)
-    const PX_TO_MM = 0.264583;
-    const marginMm = 15;
     const contentHeightMm = contentHeightPx * PX_TO_MM;
-    const pageHeightMm = Math.ceil(contentHeightMm) + (marginMm * 2) + 10; // +10mm buffer
+    const pageHeightMm = Math.max(
+      A4_HEIGHT_MM,
+      Math.ceil(contentHeightMm) + (marginMm * 2) + 10
+    );
 
-    // 注入单页打印样式
-    const printStyle = document.createElement('style');
-    printStyle.id = 'single-page-print-css';
-    printStyle.textContent =
-      '@page { size: 210mm ' + pageHeightMm + 'mm; margin: ' + marginMm + 'mm; }' +
-      '@media print {' +
-      '  h1, h2, h3, h4, h5, h6,' +
-      '  img, table, pre, figure, blockquote,' +
-      '  ul, ol, dl {' +
-      '    break-inside: auto !important;' +
-      '    page-break-inside: auto !important;' +
-      '  }' +
-      '  h1, h2 {' +
-      '    break-after: auto !important;' +
-      '    page-break-after: auto !important;' +
-      '  }' +
-      '  h1 {' +
-      '    break-before: auto !important;' +
-      '    page-break-before: auto !important;' +
-      '  }' +
-      '}';
-    document.head.appendChild(printStyle);
-
-    // 恢复按钮状态后再打印，避免按钮被禁用时打印
-    singleBtn.disabled = false;
-    setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
-
-    window.print();
-
-    // afterprint 清理动态样式
-    const cleanup = () => {
-      const el = document.getElementById('single-page-print-css');
-      if (el) el.remove();
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
+    runPrintJob({
+      title: SINGLE_PAGE_FILENAME_TITLE,
+      loadingLabel: UI_TEXT.SINGLE_PREPARING,
+      styleText:
+        '@page { size: ' + A4_WIDTH_MM + 'mm ' + pageHeightMm + 'mm; margin: ' + marginMm + 'mm; }' +
+        '@media print {' +
+        '  h1, h2, h3, h4, h5, h6,' +
+        '  img, table, pre, figure, blockquote,' +
+        '  ul, ol, dl {' +
+        '    break-inside: auto !important;' +
+        '    page-break-inside: auto !important;' +
+        '  }' +
+        '  h1, h2 {' +
+        '    break-after: auto !important;' +
+        '    page-break-after: auto !important;' +
+        '  }' +
+        '  h1, h2, h3, h4, h5, h6 {' +
+        '    break-before: auto !important;' +
+        '    page-break-before: auto !important;' +
+        '  }' +
+        '}',
+    });
   } catch (err) {
-    console.error('准备打印失败:', err);
-    showErrorToast('准备打印时出错: ' + (err.message || err));
-    singleBtn.disabled = false;
-    setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
+    console.error('Print preparation failed:', err);
+    showErrorToast(UI_TEXT.PRINT_PREPARATION_FAILED_PREFIX + (err.message || err));
+    enableButtons();
   }
 });
 
@@ -1454,6 +1484,7 @@ setupCheckboxSync();
 window.wrapTablesWithCopyButton = wrapTablesWithCopyButton;
 window.wrapCodeBlocksWithCopyButton = wrapCodeBlocksWithCopyButton;
 window.enhanceColorCodes = enhanceColorCodes;
+window.copyPreviewContent = copyPreviewContent;
 window.setupCheckboxSync = setupCheckboxSync;
 window.setupImageWidthControls = setupImageWidthControls;
 window.applySavedImageWidths = applySavedImageWidths;
@@ -1483,9 +1514,9 @@ const LONG_IMAGE_WATERMARK = '${LONG_IMAGE.WATERMARK_TEXT}';
 const LONG_IMAGE_FILENAME_PREFIX = '${LONG_IMAGE.FILENAME_PREFIX}';
 
 const LONG_IMAGE_UI = {
-  DEFAULT: '${UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT}',
-  RENDERING: '${UI_TEXT.LONG_IMAGE_BUTTONS.RENDERING}',
-  GENERATING: '${UI_TEXT.LONG_IMAGE_BUTTONS.GENERATING}',
+  DEFAULT: UI_TEXT.LONG_IMAGE_DEFAULT,
+  RENDERING: UI_TEXT.LONG_IMAGE_RENDERING,
+  GENERATING: UI_TEXT.LONG_IMAGE_GENERATING,
 };
 
 function disableAllButtons(loadingBtn, loadingText) {
@@ -1534,7 +1565,7 @@ if (longImageBtn) {
       // 提取标题：优先取第一个 h1，否则 h2，否则用默认
       const h1 = contentArea.querySelector('h1');
       const h2 = contentArea.querySelector('h2');
-      const title = (h1 && h1.textContent.trim()) || (h2 && h2.textContent.trim()) || 'Markdown';
+      const title = (h1 && h1.textContent.trim()) || (h2 && h2.textContent.trim()) || UI_TEXT.PREVIEW_FALLBACK_TITLE;
 
       // 创建离屏容器
       const offscreen = document.createElement('div');
@@ -1625,7 +1656,7 @@ if (longImageBtn) {
       // 导出 PNG 并下载
       canvas.toBlob(function(blob) {
         if (!blob) {
-          showErrorToast('图片生成失败');
+          showErrorToast(UI_TEXT.IMAGE_GENERATION_FAILED);
           enableAllButtons();
           return;
         }
@@ -1644,8 +1675,8 @@ if (longImageBtn) {
       }, 'image/png');
 
     } catch (err) {
-      console.error('长图导出失败:', err);
-      showErrorToast('导出长图时出错: ' + (err.message || err));
+      console.error('Long image export failed:', err);
+      showErrorToast(UI_TEXT.LONG_IMAGE_EXPORT_FAILED_PREFIX + (err.message || err));
       enableAllButtons();
     }
   });
@@ -1673,11 +1704,11 @@ export function generatePreviewHtml(
     JSON.stringify(imageWidthState)
   );
   return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="${APP_LOCALE}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown 预览</title>
+  <title>${UI_TEXT.APP.PREVIEW_TITLE}</title>
   <link rel="stylesheet" href="${VENDOR_RESOURCES.GITHUB_MARKDOWN_CSS}">
   <style>${previewStyles}</style>
 </head>
