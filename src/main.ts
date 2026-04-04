@@ -1427,6 +1427,10 @@ function initApp(): void {
     );
   };
 
+  const syncSplitViewButtonState = (): void => {
+    setSplitViewButtonState(splitPreview.getLayoutMode());
+  };
+
   let lastCanUseSplitPreview = canUseSplitPreview();
   let lastCanUsePreviewFocus = canUsePreviewFocusLayout();
   let actionCopyResetTimer: number | null = null;
@@ -1460,7 +1464,7 @@ function initApp(): void {
 
     if (!splitAllowed && isSplitPreviewOpen) {
       splitPreview.close();
-      setSplitViewButtonState('balanced');
+      syncSplitViewButtonState();
       if (announce && lastCanUseSplitPreview) {
         showToast(UI_TEXT.SPLIT_VIEW.SPLIT_EXITED(SPLIT_PREVIEW_MIN_VIEWPORT));
       }
@@ -1469,7 +1473,7 @@ function initApp(): void {
       splitPreview.getLayoutMode() === 'preview-focus'
     ) {
       splitPreview.setSystemLayoutMode('balanced');
-      setSplitViewButtonState('balanced');
+      syncSplitViewButtonState();
       if (announce && lastCanUsePreviewFocus && isSplitPreviewOpen) {
         showToast(UI_TEXT.SPLIT_VIEW.PREVIEW_FOCUS_RESET(PREVIEW_FOCUS_MIN_VIEWPORT));
       }
@@ -1480,7 +1484,7 @@ function initApp(): void {
     updatePreviewBtnLabel();
   };
 
-  setSplitViewButtonState(splitPreview.getLayoutMode());
+  syncSplitViewButtonState();
   syncSplitPreviewAvailability();
 
   downloadBtn.addEventListener('click', () => {
@@ -1490,6 +1494,7 @@ function initApp(): void {
   previewBtn.addEventListener('click', () => {
     if (splitPreview.isOpen()) {
       splitPreview.toggle();
+      syncSplitViewButtonState();
       updatePreviewBtnLabel();
       return;
     }
@@ -1508,6 +1513,7 @@ function initApp(): void {
     }
 
     splitPreview.toggle();
+    syncSplitViewButtonState();
     updatePreviewBtnLabel();
   });
 
@@ -1547,7 +1553,7 @@ function initApp(): void {
 
   splitViewBalancedBtn.addEventListener('click', () => {
     splitPreview.setLayoutMode('balanced');
-    setSplitViewButtonState('balanced');
+    syncSplitViewButtonState();
   });
 
   splitViewPreviewFocusBtn.addEventListener('click', () => {
@@ -1560,7 +1566,7 @@ function initApp(): void {
       return;
     }
     splitPreview.setLayoutMode('preview-focus');
-    setSplitViewButtonState('preview-focus');
+    syncSplitViewButtonState();
   });
 
   window.addEventListener(

@@ -5,6 +5,14 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 修复
+
+- **分屏布局按钮状态同步**：
+  - 宽屏下自动启用 `1:2` 预览时，`1:1 / 1:2` 按钮现在会跟随真实布局状态正确高亮
+  - 统一从分屏预览的实际 `layoutMode` 回写按钮状态，避免主预览按钮打开分屏时出现布局与按钮选中态不一致
+
 ## [2.9.0] - 2026-03-18
 
 ### 改进
@@ -278,7 +286,7 @@ markdowneditor/
 │       └── preview.ts   # 预览模板
 ├── tests/
 │   ├── unit/            # 单元测试
-│   └── e2e/             # E2E 测试
+│   └── e2e/             # 端到端测试
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
