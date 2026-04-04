@@ -5,6 +5,11 @@ export interface LocaleMessages {
     TITLE: string;
     PREVIEW_TITLE: string;
     PREVIEW_FALLBACK_TITLE: string;
+    MARKDOWN_FILENAME_PREFIX: string;
+    PAGED_PDF_FILENAME: string;
+    SINGLE_PAGE_PDF_FILENAME: string;
+    LONG_IMAGE_WATERMARK: string;
+    LONG_IMAGE_FILENAME_PREFIX: string;
   };
   BUTTONS: {
     PREVIEW: string;
@@ -254,9 +259,14 @@ export const APP_LOCALE = detectLocaleFromNavigator(
 const localeMessages: Record<SupportedLocale, LocaleMessages> = {
   en: {
     APP: {
-      TITLE: 'Markdown Editor',
-      PREVIEW_TITLE: 'Markdown Preview',
-      PREVIEW_FALLBACK_TITLE: 'Markdown',
+      TITLE: 'Phaino',
+      PREVIEW_TITLE: 'Phaino Preview',
+      PREVIEW_FALLBACK_TITLE: 'Phaino',
+      MARKDOWN_FILENAME_PREFIX: 'phaino',
+      PAGED_PDF_FILENAME: 'phaino-preview-paged.pdf',
+      SINGLE_PAGE_PDF_FILENAME: 'phaino-preview-single-page.pdf',
+      LONG_IMAGE_WATERMARK: 'Made with Phaino',
+      LONG_IMAGE_FILENAME_PREFIX: 'phaino-long-image',
     },
     BUTTONS: {
       PREVIEW: 'Preview',
@@ -281,7 +291,7 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
     EDITOR: {
       ARIA_LABEL: 'Markdown editor',
       PLACEHOLDER: 'Write Markdown here...',
-      PREVIEW_FRAME_TITLE: 'Markdown preview',
+      PREVIEW_FRAME_TITLE: 'Phaino Preview',
       SPLIT_ACTIONS_ARIA: 'Preview actions',
       SPLIT_VIEW_GROUP_ARIA: 'Preview layout',
       HISTORY_PANEL_ARIA: 'History panel',
@@ -371,9 +381,14 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
   },
   fr: {
     APP: {
-      TITLE: 'Editeur Markdown',
-      PREVIEW_TITLE: 'Aperçu Markdown',
-      PREVIEW_FALLBACK_TITLE: 'Markdown',
+      TITLE: 'Phaino',
+      PREVIEW_TITLE: 'Aperçu Phaino',
+      PREVIEW_FALLBACK_TITLE: 'Phaino',
+      MARKDOWN_FILENAME_PREFIX: 'phaino',
+      PAGED_PDF_FILENAME: 'phaino-preview-paged.pdf',
+      SINGLE_PAGE_PDF_FILENAME: 'phaino-preview-single-page.pdf',
+      LONG_IMAGE_WATERMARK: 'Créé avec Phaino',
+      LONG_IMAGE_FILENAME_PREFIX: 'phaino-image-longue',
     },
     BUTTONS: {
       PREVIEW: 'Aperçu',
@@ -398,7 +413,7 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
     EDITOR: {
       ARIA_LABEL: 'Editeur Markdown',
       PLACEHOLDER: 'Ecrivez votre Markdown ici...',
-      PREVIEW_FRAME_TITLE: 'Aperçu Markdown',
+      PREVIEW_FRAME_TITLE: 'Aperçu Phaino',
       SPLIT_ACTIONS_ARIA: "Actions d'aperçu",
       SPLIT_VIEW_GROUP_ARIA: "Disposition de l'aperçu",
       HISTORY_PANEL_ARIA: "Panneau d'historique",
@@ -493,9 +508,14 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
   },
   de: {
     APP: {
-      TITLE: 'Markdown-Editor',
-      PREVIEW_TITLE: 'Markdown-Vorschau',
-      PREVIEW_FALLBACK_TITLE: 'Markdown',
+      TITLE: 'Phaino',
+      PREVIEW_TITLE: 'Phaino-Vorschau',
+      PREVIEW_FALLBACK_TITLE: 'Phaino',
+      MARKDOWN_FILENAME_PREFIX: 'phaino',
+      PAGED_PDF_FILENAME: 'phaino-preview-paged.pdf',
+      SINGLE_PAGE_PDF_FILENAME: 'phaino-preview-single-page.pdf',
+      LONG_IMAGE_WATERMARK: 'Mit Phaino erstellt',
+      LONG_IMAGE_FILENAME_PREFIX: 'phaino-langbild',
     },
     BUTTONS: {
       PREVIEW: 'Vorschau',
@@ -520,7 +540,7 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
     EDITOR: {
       ARIA_LABEL: 'Markdown-Editor',
       PLACEHOLDER: 'Markdown hier eingeben...',
-      PREVIEW_FRAME_TITLE: 'Markdown-Vorschau',
+      PREVIEW_FRAME_TITLE: 'Phaino-Vorschau',
       SPLIT_ACTIONS_ARIA: 'Vorschauaktionen',
       SPLIT_VIEW_GROUP_ARIA: 'Vorschaulayout',
       HISTORY_PANEL_ARIA: 'Verlaufsfenster',
@@ -615,9 +635,14 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
   },
   it: {
     APP: {
-      TITLE: 'Editor Markdown',
-      PREVIEW_TITLE: 'Anteprima Markdown',
-      PREVIEW_FALLBACK_TITLE: 'Markdown',
+      TITLE: 'Phaino',
+      PREVIEW_TITLE: 'Anteprima Phaino',
+      PREVIEW_FALLBACK_TITLE: 'Phaino',
+      MARKDOWN_FILENAME_PREFIX: 'phaino',
+      PAGED_PDF_FILENAME: 'phaino-preview-paged.pdf',
+      SINGLE_PAGE_PDF_FILENAME: 'phaino-preview-single-page.pdf',
+      LONG_IMAGE_WATERMARK: 'Creato con Phaino',
+      LONG_IMAGE_FILENAME_PREFIX: 'phaino-immagine-lunga',
     },
     BUTTONS: {
       PREVIEW: 'Anteprima',
@@ -642,7 +667,7 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
     EDITOR: {
       ARIA_LABEL: 'Editor Markdown',
       PLACEHOLDER: 'Scrivi qui il Markdown...',
-      PREVIEW_FRAME_TITLE: 'Anteprima Markdown',
+      PREVIEW_FRAME_TITLE: 'Anteprima Phaino',
       SPLIT_ACTIONS_ARIA: 'Azioni anteprima',
       SPLIT_VIEW_GROUP_ARIA: 'Layout anteprima',
       HISTORY_PANEL_ARIA: 'Pannello cronologia',
@@ -737,9 +762,14 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
   },
   ja: {
     APP: {
-      TITLE: 'Markdownエディタ',
-      PREVIEW_TITLE: 'Markdownプレビュー',
-      PREVIEW_FALLBACK_TITLE: 'Markdown',
+      TITLE: 'Phaino',
+      PREVIEW_TITLE: 'Phainoプレビュー',
+      PREVIEW_FALLBACK_TITLE: 'Phaino',
+      MARKDOWN_FILENAME_PREFIX: 'phaino',
+      PAGED_PDF_FILENAME: 'phaino-preview-paged.pdf',
+      SINGLE_PAGE_PDF_FILENAME: 'phaino-preview-single-page.pdf',
+      LONG_IMAGE_WATERMARK: 'Phainoで作成',
+      LONG_IMAGE_FILENAME_PREFIX: 'phaino-long-image',
     },
     BUTTONS: {
       PREVIEW: 'プレビュー',
@@ -764,7 +794,7 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
     EDITOR: {
       ARIA_LABEL: 'Markdownエディタ',
       PLACEHOLDER: 'ここにMarkdownを入力してください...',
-      PREVIEW_FRAME_TITLE: 'Markdownプレビュー',
+      PREVIEW_FRAME_TITLE: 'Phainoプレビュー',
       SPLIT_ACTIONS_ARIA: 'プレビュー操作',
       SPLIT_VIEW_GROUP_ARIA: 'プレビュー表示比率',
       HISTORY_PANEL_ARIA: '履歴パネル',
@@ -856,9 +886,14 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
   },
   'zh-CN': {
     APP: {
-      TITLE: 'Markdown 编辑器',
-      PREVIEW_TITLE: 'Markdown 预览',
-      PREVIEW_FALLBACK_TITLE: 'Markdown',
+      TITLE: '展页',
+      PREVIEW_TITLE: '展页预览',
+      PREVIEW_FALLBACK_TITLE: '展页',
+      MARKDOWN_FILENAME_PREFIX: '展页',
+      PAGED_PDF_FILENAME: '展页-分页预览.pdf',
+      SINGLE_PAGE_PDF_FILENAME: '展页-单页预览.pdf',
+      LONG_IMAGE_WATERMARK: '由展页生成',
+      LONG_IMAGE_FILENAME_PREFIX: '展页-长图',
     },
     BUTTONS: {
       PREVIEW: '预览',
@@ -883,7 +918,7 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
     EDITOR: {
       ARIA_LABEL: 'Markdown 编辑区',
       PLACEHOLDER: '在这里输入 Markdown 内容...',
-      PREVIEW_FRAME_TITLE: 'Markdown 预览',
+      PREVIEW_FRAME_TITLE: '展页预览',
       SPLIT_ACTIONS_ARIA: '预览操作',
       SPLIT_VIEW_GROUP_ARIA: '预览视图比例',
       HISTORY_PANEL_ARIA: '历史记录弹窗',
@@ -973,9 +1008,14 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
   },
   'zh-TW': {
     APP: {
-      TITLE: 'Markdown 編輯器',
-      PREVIEW_TITLE: 'Markdown 預覽',
-      PREVIEW_FALLBACK_TITLE: 'Markdown',
+      TITLE: '展頁',
+      PREVIEW_TITLE: '展頁預覽',
+      PREVIEW_FALLBACK_TITLE: '展頁',
+      MARKDOWN_FILENAME_PREFIX: '展頁',
+      PAGED_PDF_FILENAME: '展頁-分頁預覽.pdf',
+      SINGLE_PAGE_PDF_FILENAME: '展頁-單頁預覽.pdf',
+      LONG_IMAGE_WATERMARK: '由展頁生成',
+      LONG_IMAGE_FILENAME_PREFIX: '展頁-長圖',
     },
     BUTTONS: {
       PREVIEW: '預覽',
@@ -1000,7 +1040,7 @@ const localeMessages: Record<SupportedLocale, LocaleMessages> = {
     EDITOR: {
       ARIA_LABEL: 'Markdown 編輯區',
       PLACEHOLDER: '在這裡輸入 Markdown 內容...',
-      PREVIEW_FRAME_TITLE: 'Markdown 預覽',
+      PREVIEW_FRAME_TITLE: '展頁預覽',
       SPLIT_ACTIONS_ARIA: '預覽操作',
       SPLIT_VIEW_GROUP_ARIA: '預覽視圖比例',
       HISTORY_PANEL_ARIA: '歷史紀錄視窗',

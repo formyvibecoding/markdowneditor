@@ -534,7 +534,7 @@ const UI_TEXT = ${previewScriptUI};
 const INITIAL_IMAGE_WIDTH_STATE = __IMAGE_WIDTH_STATE__;
 
 const BUTTON_ICONS = ${JSON.stringify(BUTTON_ICONS)};
-const PRINT_STYLE_ID = 'markdown-preview-print-css';
+const PRINT_STYLE_ID = 'phaino-preview-print-css';
 
 function escapeHtml(value) {
   return value

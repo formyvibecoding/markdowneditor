@@ -19,7 +19,8 @@ export interface MonthGroup {
   days: DayGroup[];
 }
 
-const STORAGE_KEY = 'markdown-editor-history-v1';
+const STORAGE_KEY = 'phaino-history-v1';
+const LEGACY_STORAGE_KEYS = ['markdown-editor-history-v1'] as const;
 const MAX_HISTORY_ITEMS = 300;
 const MERGE_WINDOW_MS = 3 * 60 * 1000;
 const MIN_MEANINGFUL_DIFF = 20;
@@ -67,7 +68,32 @@ function safeParse(value: string | null): HistoryEntry[] {
 
 export function loadHistoryEntries(): HistoryEntry[] {
   try {
-    return safeParse(window.localStorage.getItem(STORAGE_KEY)).sort(
+    const currentEntries = safeParse(window.localStorage.getItem(STORAGE_KEY));
+    if (currentEntries.length > 0) {
+      return currentEntries.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    }
+
+    for (const legacyKey of LEGACY_STORAGE_KEYS) {
+      const legacyEntries = safeParse(window.localStorage.getItem(legacyKey));
+      if (legacyEntries.length === 0) {
+        continue;
+      }
+
+      persistHistory(legacyEntries);
+      try {
+        window.localStorage.removeItem(legacyKey);
+      } catch {
+        // 静默忽略旧键清理失败
+      }
+
+      return legacyEntries.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    }
+
+    return currentEntries.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   } catch {
@@ -189,6 +215,7 @@ export function deleteHistoryEntry(entryId: string): HistoryEntry[] {
 export function clearHistoryEntries(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    LEGACY_STORAGE_KEYS.forEach(key => window.localStorage.removeItem(key));
   } catch {
     // 静默忽略
   }

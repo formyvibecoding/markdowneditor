@@ -1,7 +1,7 @@
 import { APP_LOCALE, getLocaleMessages } from './locale';
 
 /**
- * Markdown 编辑器配置模块
+ * 展页配置模块
  * 集中管理所有常量和配置
  */
 
@@ -27,6 +27,11 @@ export const A4 = {
 } as const;
 
 // =============================================================================
+// UI 文案配置
+// =============================================================================
+export const UI_TEXT = getLocaleMessages(APP_LOCALE);
+
+// =============================================================================
 // PDF 生成配置
 // =============================================================================
 export const PDF_CONFIG = {
@@ -37,15 +42,10 @@ export const PDF_CONFIG = {
   /** 渲染缩放比例 */
   SCALE: 2,
   /** 分页 PDF 文件名 */
-  PAGED_FILENAME: 'markdown-preview-paged.pdf',
+  PAGED_FILENAME: UI_TEXT.APP.PAGED_PDF_FILENAME,
   /** 单页 PDF 文件名 */
-  SINGLE_PAGE_FILENAME: 'markdown-preview-single-page.pdf',
+  SINGLE_PAGE_FILENAME: UI_TEXT.APP.SINGLE_PAGE_PDF_FILENAME,
 } as const;
-
-// =============================================================================
-// UI 文案配置
-// =============================================================================
-export const UI_TEXT = getLocaleMessages(APP_LOCALE);
 
 // =============================================================================
 // 样式配置
@@ -105,9 +105,9 @@ export const LONG_IMAGE = {
   /** 底部水印区域内边距 (px) */
   FOOTER_PADDING: 16,
   /** 水印文案 */
-  WATERMARK_TEXT: 'Made with Markdown Editor',
+  WATERMARK_TEXT: UI_TEXT.APP.LONG_IMAGE_WATERMARK,
   /** 文件名前缀 */
-  FILENAME_PREFIX: 'markdown-long-image',
+  FILENAME_PREFIX: UI_TEXT.APP.LONG_IMAGE_FILENAME_PREFIX,
 } as const;
 
 // =============================================================================

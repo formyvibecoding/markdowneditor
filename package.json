@@ -1,7 +1,7 @@
 {
-  "name": "markdown-editor",
+  "name": "phaino",
   "version": "2.9.0",
-  "description": "简洁高效的 Markdown 编辑器，支持实时预览和 PDF 导出",
+  "description": "Phaino（展页）是一款安静的 Markdown 预览器，支持实时预览、PDF 导出和长图导出",
   "type": "module",
   "scripts": {
     "dev": "vite",

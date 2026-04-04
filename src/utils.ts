@@ -109,10 +109,14 @@ export function downloadFile(blob: Blob, filename: string): void {
 
 /**
  * 生成时间戳文件名
+ * @param prefix 文件名前缀
  * @param extension 文件扩展名
- * @returns 格式为 YYYYMMDDHHmmss.ext 的文件名
+ * @returns 格式为 prefix-YYYYMMDDHHmmss.ext 的文件名
  */
-export function generateTimestampFilename(extension: string): string {
+export function generateTimestampFilename(
+  prefix: string,
+  extension: string
+): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -121,7 +125,7 @@ export function generateTimestampFilename(extension: string): string {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
 
-  return `${year}${month}${day}${hours}${minutes}${seconds}.${extension}`;
+  return `${prefix}-${year}${month}${day}${hours}${minutes}${seconds}.${extension}`;
 }
 
 // =============================================================================

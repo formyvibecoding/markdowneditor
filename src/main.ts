@@ -1,5 +1,5 @@
 /**
- * Markdown 编辑器主入口
+ * 展页主入口
  * @version 2.9.0
  */
 
@@ -525,7 +525,10 @@ function downloadMarkdown(textarea: HTMLTextAreaElement): void {
   }
 
   const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-  const filename = generateTimestampFilename('md');
+  const filename = generateTimestampFilename(
+    UI_TEXT.APP.MARKDOWN_FILENAME_PREFIX,
+    'md'
+  );
 
   downloadFile(blob, filename);
 }

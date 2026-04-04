@@ -1,6 +1,8 @@
-# Markdown Editor
+# 展页
 
-A polished, minimalist Markdown editor that focuses on writing flow: real-time preview, PDF export, and a clean, classic interface. Crafted with a Claude-inspired tone—warm, precise, and purposeful.
+Phaino
+
+一款安静的 Markdown 预览器，专注于把文字先展开成页：实时预览、PDF 导出、长图导出，以及干净克制的界面。
 
 ## Live Demo
 
