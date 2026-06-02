@@ -45,3 +45,6 @@ claude.md
 AGENTS.md
 PCD.md
 PRD.md
+
+# Claude Code local settings (per-machine, not synced across environments)
+**/.claude/settings.local.json
