@@ -1,0 +1,121 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Auto-copied vendor files (generated from node_modules by Vite plugin)
+public/vendor/
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cache
+.cache/
+.eslintcache
+.prettier-cache
+
+# Internal / AI assistant config
+.claude/
+claude.md
+AGENTS.md
+PCD.md
+PRD.md
+
+# Claude Code local settings (per-machine, not synced across environments)
+**/.claude/settings.local.json
+
+# ===== 统一规则：文档、素材、密钥、生成物一律不进仓库 =====
+# 文档
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.xlsm
+*.ppt
+*.pptx
+*.numbers
+*.pages
+*.csv
+*.tsv
+*.eml
+*.msg
+# 图片、音视频
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.heic
+*.webp
+*.bmp
+*.tif
+*.tiff
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.mp3
+*.wav
+*.m4a
+# 图纸、3D 模型
+*.dwg
+*.dxf
+*.glb
+*.gltf
+*.obj
+*.fbx
+*.stl
+# 压缩包
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.tgz
+# 密钥与凭据
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+*credentials*.json
+secrets.*
+# 生成物与本机文件
+node_modules/
+dist/
+build/
+.next/
+__pycache__/
+.venv/
+venv/
+*.log
+.DS_Store

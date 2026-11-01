@@ -1,0 +1,1730 @@
+/**
+ * 预览页面模板模块
+ * 将 HTML 模板从主逻辑中抽离，提高可维护性
+ */
+
+import {
+  VENDOR_RESOURCES,
+  UI_TEXT,
+  STYLES,
+  A4,
+  PDF_CONFIG,
+  LONG_IMAGE,
+} from '../config';
+import { APP_LOCALE } from '../locale';
+import { BUTTON_ICONS, renderButtonContent } from '../ui-icons';
+
+// =============================================================================
+// CSS 样式模板
+// =============================================================================
+
+const previewStyles = `
+body {
+  --preview-page-max-width: 940px;
+  --preview-content-max-width: 900px;
+  --preview-button-bg: rgba(255, 255, 255, 0.92);
+  --preview-button-bg-hover: #f6efe9;
+  --preview-button-border: rgba(92, 62, 46, 0.16);
+  --preview-button-border-strong: rgba(92, 62, 46, 0.28);
+  margin: 0;
+  padding: 0;
+  background-color: ${STYLES.COLORS.BACKGROUND};
+  font-family: ${STYLES.FONTS.PREVIEW};
+}
+
+.preview-controls {
+  position: fixed;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  box-sizing: border-box;
+  width: min(calc(100% - 40px), var(--preview-content-max-width));
+}
+
+/* When embedded in iframe (split-pane), hide controls and reduce padding */
+.embedded .preview-controls {
+  display: none;
+}
+
+.embedded .container {
+  width: 100%;
+  max-width: none;
+  padding-top: 20px;
+}
+
+.embedded .markdown-body {
+  width: 90%;
+  max-width: none;
+}
+
+.preview-toast-container {
+  position: fixed;
+  top: 56px;
+  right: 20px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-toast {
+  max-width: 320px;
+  background: rgba(166, 47, 47, 0.95);
+  color: #fff;
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  font-size: 13px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-button__icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.app-button__label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 15px;
+  background: var(--preview-button-bg);
+  border: 1px solid var(--preview-button-border);
+  color: #5c3e2e;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  white-space: nowrap;
+}
+
+.pdf-btn:hover:not(:disabled) {
+  background-color: var(--preview-button-bg-hover);
+  border-color: var(--preview-button-border-strong);
+  box-shadow: 0 8px 18px rgba(27, 24, 21, 0.1);
+  transform: translateY(-1px);
+}
+
+.pdf-btn:focus-visible {
+  outline: 2px solid rgba(92, 62, 46, 0.42);
+  outline-offset: 2px;
+}
+
+.pdf-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.pdf-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.container {
+  box-sizing: border-box;
+  width: min(100%, var(--preview-page-max-width));
+  margin: 0 auto;
+  padding: 20px 20px 40px;
+  padding-top: 78px;
+}
+
+.markdown-body {
+  box-sizing: border-box;
+  background-color: ${STYLES.COLORS.WHITE};
+  padding: clamp(28px, 3vw, 36px);
+  margin: 0 auto;
+  width: 100%;
+  max-width: var(--preview-content-max-width);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  font-family: ${STYLES.FONTS.PREVIEW};
+  text-align: left;
+}
+
+/* 打印样式 */
+@media print {
+  .preview-controls,
+  .table-copy-btn,
+  .code-copy-btn,
+  .color-swatch-btn,
+  .image-width-popover {
+    display: none !important;
+  }
+  body {
+    background-color: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+  .markdown-body {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  h1, h2, h3, h4, h5, h6,
+  img, table, pre, figure, blockquote,
+  ul, ol, dl {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+  h1, h2 {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    break-before: auto;
+    page-break-before: auto;
+  }
+}
+
+/* 表格样式 */
+.markdown-body table {
+  position: relative;
+}
+
+.markdown-body .table-with-copy {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.markdown-body .code-block-with-copy {
+  position: relative;
+}
+
+.markdown-body .table-with-copy .table-copy-btn,
+.markdown-body .code-block-with-copy .code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(33, 37, 41, 0.76);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.markdown-body .table-with-copy:hover .table-copy-btn,
+.markdown-body .table-with-copy .table-copy-btn:focus-visible,
+.markdown-body .code-block-with-copy:hover .code-copy-btn,
+.markdown-body .code-block-with-copy .code-copy-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.markdown-body .table-with-copy .table-copy-btn:hover,
+.markdown-body .table-with-copy .table-copy-btn:focus-visible,
+.markdown-body .code-block-with-copy .code-copy-btn:hover,
+.markdown-body .code-block-with-copy .code-copy-btn:focus-visible {
+  background: rgba(33, 37, 41, 0.9);
+  transform: translateY(-1px);
+}
+
+.markdown-body .table-with-copy .table-copy-btn .app-button__icon svg,
+.markdown-body .code-block-with-copy .code-copy-btn .app-button__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.markdown-body table th {
+  background-color: #e9ecef;
+  font-weight: 600;
+}
+
+/* 标题样式 */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  letter-spacing: normal;
+  font-family: ${STYLES.FONTS.PREVIEW};
+  word-spacing: normal;
+}
+
+/* 防止中英文异常间距 */
+.markdown-body * {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.markdown-body .color-code-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.markdown-body .color-swatch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgba(92, 62, 46, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 1px 2px rgba(27, 24, 21, 0.04);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.markdown-body .color-swatch-btn:hover,
+.markdown-body .color-swatch-btn:focus-visible {
+  border-color: rgba(92, 62, 46, 0.26);
+  box-shadow: 0 6px 14px rgba(27, 24, 21, 0.08);
+}
+
+.markdown-body .color-swatch-btn .swatch {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+
+.markdown-body img {
+  transition:
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.markdown-body img[data-width-editable='true']:hover {
+  box-shadow: 0 12px 30px rgba(27, 24, 21, 0.12);
+}
+
+.image-width-popover {
+  position: fixed;
+  z-index: 1200;
+  display: grid;
+  grid-template-columns: auto;
+  gap: 6px;
+  min-width: 228px;
+  padding: 9px 10px;
+  border: 1px solid rgba(92, 62, 46, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(27, 24, 21, 0.12);
+  backdrop-filter: blur(14px);
+  transform: translateY(0);
+  opacity: 1;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.image-width-popover[hidden] {
+  display: flex;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+}
+
+.image-width-popover__label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px 0 2px;
+  color: rgba(92, 62, 46, 0.72);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.image-width-popover__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.image-width-popover__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-height: 30px;
+  padding: 0 10px 0 12px;
+  border: 1px solid rgba(92, 62, 46, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.image-width-popover__input {
+  width: 72px;
+  border: none;
+  background: transparent;
+  color: #4d3326;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  outline: none;
+  text-align: right;
+}
+
+.image-width-popover__input::placeholder {
+  color: rgba(92, 62, 46, 0.34);
+}
+
+.image-width-popover__unit {
+  color: rgba(92, 62, 46, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.image-width-popover__reset {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(92, 62, 46, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.image-width-popover__reset:hover,
+.image-width-popover__reset:focus-visible {
+  background: rgba(92, 62, 46, 0.08);
+  border-color: rgba(92, 62, 46, 0.16);
+}
+
+.image-width-popover__apply {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgba(92, 62, 46, 0.18);
+  border-radius: 999px;
+  background: rgba(92, 62, 46, 0.08);
+  color: #4d3326;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.image-width-popover__apply:hover,
+.image-width-popover__apply:focus-visible {
+  background: rgba(92, 62, 46, 0.14);
+  border-color: rgba(92, 62, 46, 0.24);
+}
+
+.image-width-popover__hint {
+  min-height: 15px;
+  padding: 0 4px;
+  color: rgba(92, 62, 46, 0.58);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.image-width-popover__hint[data-tone='warning'] {
+  color: #8a4b1f;
+}
+`;
+
+const previewScriptUI = JSON.stringify({
+  PAGED: UI_TEXT.PDF_BUTTONS.PAGED,
+  PAGED_LOADING: UI_TEXT.PDF_BUTTONS.PAGED_LOADING,
+  SINGLE: UI_TEXT.PDF_BUTTONS.SINGLE,
+  SINGLE_PREPARING: UI_TEXT.PDF_BUTTONS.SINGLE_PREPARING,
+  COPY: UI_TEXT.COPY_BUTTONS.COPY,
+  COPYING: UI_TEXT.COPY_BUTTONS.COPYING,
+  COPIED: UI_TEXT.COPY_BUTTONS.COPIED,
+  COPY_FAILED: UI_TEXT.ERRORS.COPY_FAILED,
+  COPY_TABLE: UI_TEXT.PREVIEW_TOOLS.COPY_TABLE,
+  COPY_CODE: UI_TEXT.PREVIEW_TOOLS.COPY_CODE,
+  COPY_COLOR_VALUE_PREFIX: UI_TEXT.PREVIEW_TOOLS.COPY_COLOR_VALUE_PREFIX,
+  PDF_GENERATION_FAILED_PREFIX: UI_TEXT.PREVIEW_TOOLS.PDF_GENERATION_FAILED_PREFIX,
+  PRINT_PREPARATION_FAILED_PREFIX:
+    UI_TEXT.PREVIEW_TOOLS.PRINT_PREPARATION_FAILED_PREFIX,
+  IMAGE_GENERATION_FAILED: UI_TEXT.PREVIEW_TOOLS.IMAGE_GENERATION_FAILED,
+  LONG_IMAGE_EXPORT_FAILED_PREFIX:
+    UI_TEXT.PREVIEW_TOOLS.LONG_IMAGE_EXPORT_FAILED_PREFIX,
+  LONG_IMAGE_DEFAULT: UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT,
+  LONG_IMAGE_RENDERING: UI_TEXT.LONG_IMAGE_BUTTONS.RENDERING,
+  LONG_IMAGE_GENERATING: UI_TEXT.LONG_IMAGE_BUTTONS.GENERATING,
+  PREVIEW_FALLBACK_TITLE: UI_TEXT.APP.PREVIEW_FALLBACK_TITLE,
+});
+
+// =============================================================================
+// JavaScript 代码模板
+// =============================================================================
+
+const previewScript = `
+// 获取元素
+const contentArea = document.getElementById('preview-content-area');
+const pagedBtn = document.getElementById('download-pdf-btn');
+const singleBtn = document.getElementById('download-single-page-pdf-btn');
+const copyBtn = document.getElementById('copy-preview-btn');
+
+// 配置常量
+const A4_WIDTH_MM = ${A4.WIDTH_MM};
+const A4_HEIGHT_MM = ${A4.HEIGHT_MM};
+const PAGED_MARGINS = ${JSON.stringify(PDF_CONFIG.PAGED_MARGINS)};
+const PAGED_FILENAME_TITLE = ${JSON.stringify(
+  PDF_CONFIG.PAGED_FILENAME.replace(/\.pdf$/i, '')
+)};
+const SINGLE_PAGE_FILENAME_TITLE = ${JSON.stringify(
+  PDF_CONFIG.SINGLE_PAGE_FILENAME.replace(/\.pdf$/i, '')
+)};
+
+// UI 文案
+const UI_TEXT = ${previewScriptUI};
+
+const INITIAL_IMAGE_WIDTH_STATE = __IMAGE_WIDTH_STATE__;
+
+const BUTTON_ICONS = ${JSON.stringify(BUTTON_ICONS)};
+const PRINT_STYLE_ID = 'phaino-preview-print-css';
+
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderButtonContent(icon, label) {
+  return '<span class="app-button__icon" aria-hidden="true">' + BUTTON_ICONS[icon] + '</span>'
+    + '<span class="app-button__label">' + escapeHtml(label) + '</span>';
+}
+
+function setButtonContent(button, icon, label) {
+  if (!button) return;
+  button.innerHTML = renderButtonContent(icon, label);
+}
+
+// Vendor 资源（本地打包）
+const VENDOR = {
+  html2canvas: ${JSON.stringify(VENDOR_RESOURCES.HTML2CANVAS)},
+};
+
+// 加载脚本（本地 vendor）
+async function loadScript(urls) {
+  for (const url of urls) {
+    try {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      return;
+    } catch (e) {
+      continue;
+    }
+  }
+  throw new Error('Vendor 脚本加载失败');
+}
+
+// 加载所有依赖
+let libsLoaded = false;
+async function ensureLibs() {
+  if (libsLoaded) return;
+  await Promise.all([loadScript(VENDOR.html2canvas)]);
+  libsLoaded = true;
+}
+
+// 按钮状态管理
+function disableButtons(loadingText) {
+  pagedBtn.disabled = true;
+  singleBtn.disabled = true;
+  setButtonContent(pagedBtn, 'pagedPdf', loadingText);
+}
+
+function enableButtons() {
+  pagedBtn.disabled = false;
+  singleBtn.disabled = false;
+  setButtonContent(pagedBtn, 'pagedPdf', UI_TEXT.PAGED);
+  setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
+}
+
+function setCopyButtonState(text, disabled) {
+  if (!copyBtn) return;
+  setButtonContent(copyBtn, text === UI_TEXT.COPIED ? 'check' : 'copy', text);
+  copyBtn.disabled = disabled;
+}
+
+function showErrorToast(message) {
+  let container = document.querySelector('.preview-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'preview-toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'preview-toast';
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 2200);
+}
+
+function restoreSelection(selection, ranges) {
+  if (!selection) return;
+  selection.removeAllRanges();
+  ranges.forEach((range) => selection.addRange(range));
+}
+
+function syncCheckboxAttributes(container) {
+  const inputs = container.querySelectorAll('input[type="checkbox"]');
+  return Array.from(inputs).map((input) => {
+    const hadAttr = input.hasAttribute('checked');
+    if (input.checked) {
+      input.setAttribute('checked', '');
+    } else {
+      input.removeAttribute('checked');
+    }
+    return { input, hadAttr };
+  });
+}
+
+function restoreCheckboxAttributes(states) {
+  states.forEach(({ input, hadAttr }) => {
+    if (hadAttr) {
+      input.setAttribute('checked', '');
+    } else {
+      input.removeAttribute('checked');
+    }
+  });
+}
+
+function cleanupPrintArtifacts(previousTitle, fallbackTimer) {
+  const existingStyle = document.getElementById(PRINT_STYLE_ID);
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+  document.title = previousTitle;
+  if (typeof fallbackTimer === 'number') {
+    window.clearTimeout(fallbackTimer);
+  }
+  enableButtons();
+}
+
+function runPrintJob(options) {
+  const { title, styleText, loadingLabel } = options;
+  disableButtons(loadingLabel);
+
+  const existingStyle = document.getElementById(PRINT_STYLE_ID);
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+
+  const previousTitle = document.title;
+  document.title = title;
+
+  const printStyle = document.createElement('style');
+  printStyle.id = PRINT_STYLE_ID;
+  printStyle.textContent = styleText;
+  document.head.appendChild(printStyle);
+
+  let cleanedUp = false;
+  let fallbackTimer = null;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    window.removeEventListener('afterprint', cleanup);
+    cleanupPrintArtifacts(previousTitle, fallbackTimer);
+  };
+
+  window.addEventListener('afterprint', cleanup);
+  fallbackTimer = window.setTimeout(cleanup, 2000);
+
+  requestAnimationFrame(() => {
+    try {
+      window.print();
+    } catch (err) {
+      cleanup();
+      console.error('Print execution failed:', err);
+      showErrorToast(UI_TEXT.PRINT_PREPARATION_FAILED_PREFIX + (err.message || err));
+    }
+  });
+}
+
+let imageWidthState = { ...INITIAL_IMAGE_WIDTH_STATE };
+let activeImageTarget = null;
+let imageWidthHideTimer = null;
+let imageWidthPopover = null;
+let imageWidthInput = null;
+let imageWidthHint = null;
+let imageWidthUiInitialized = false;
+
+function getPreviewImages() {
+  if (!contentArea) return [];
+  return Array.from(contentArea.querySelectorAll('img'));
+}
+
+function getImageWidthKey(image) {
+  const images = getPreviewImages();
+  const index = images.indexOf(image);
+  const src = image.getAttribute('src') || image.currentSrc || '';
+  return src + '::' + index;
+}
+
+function normalizeImageWidthValue(value) {
+  if (value === 'auto') return 'auto';
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 'auto';
+  return String(Math.max(40, Math.min(2400, Math.round(numeric))));
+}
+
+function setImageWidthHint(message, tone) {
+  if (!imageWidthHint) return;
+  imageWidthHint.textContent = message || '';
+  if (tone) {
+    imageWidthHint.dataset.tone = tone;
+  } else {
+    delete imageWidthHint.dataset.tone;
+  }
+}
+
+function applyImageWidthStyle(image, width) {
+  image.dataset.widthEditable = 'true';
+  if (width === 'auto') {
+    image.style.width = '';
+    image.style.maxWidth = '';
+    image.style.height = '';
+    image.dataset.previewImageWidth = 'auto';
+    return;
+  }
+
+  image.style.width = width + 'px';
+  image.style.maxWidth = '100%';
+  image.style.height = 'auto';
+  image.dataset.previewImageWidth = width;
+}
+
+function syncImageWidthStateToParent() {
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage(
+      {
+        type: 'image-width-state',
+        widths: imageWidthState,
+      },
+      '*'
+    );
+  }
+}
+
+function updateImageWidthPopoverState() {
+  if (!imageWidthPopover || !activeImageTarget) return;
+  const activeValue =
+    imageWidthState[getImageWidthKey(activeImageTarget)] || 'auto';
+  if (imageWidthInput) {
+    imageWidthInput.value = activeValue === 'auto' ? '' : activeValue;
+    imageWidthInput.placeholder = activeValue === 'auto' ? '自动' : '';
+  }
+  setImageWidthHint('回车或点应用后生效');
+}
+
+function positionImageWidthPopover(target) {
+  if (!imageWidthPopover) return;
+  const rect = target.getBoundingClientRect();
+  imageWidthPopover.hidden = false;
+
+  const popoverRect = imageWidthPopover.getBoundingClientRect();
+  const nextLeft = Math.min(
+    Math.max(12, rect.right - popoverRect.width - 10),
+    window.innerWidth - popoverRect.width - 12
+  );
+  const nextTop = Math.max(12, rect.top + 10);
+
+  imageWidthPopover.style.left = nextLeft + 'px';
+  imageWidthPopover.style.top = nextTop + 'px';
+}
+
+function clearImageWidthHideTimer() {
+  if (imageWidthHideTimer !== null) {
+    window.clearTimeout(imageWidthHideTimer);
+    imageWidthHideTimer = null;
+  }
+}
+
+function hideImageWidthPopover() {
+  clearImageWidthHideTimer();
+  if (
+    imageWidthPopover &&
+    imageWidthPopover.contains(document.activeElement)
+  ) {
+    return;
+  }
+  activeImageTarget = null;
+  if (imageWidthPopover) {
+    imageWidthPopover.hidden = true;
+  }
+}
+
+function scheduleImageWidthPopoverHide() {
+  clearImageWidthHideTimer();
+  imageWidthHideTimer = window.setTimeout(() => {
+    if (
+      imageWidthPopover &&
+      imageWidthPopover.contains(document.activeElement)
+    ) {
+      return;
+    }
+    hideImageWidthPopover();
+  }, 140);
+}
+
+function showImageWidthPopover(target) {
+  clearImageWidthHideTimer();
+  activeImageTarget = target;
+  updateImageWidthPopoverState();
+  positionImageWidthPopover(target);
+}
+
+function ensureImageWidthPopover() {
+  if (imageWidthPopover) {
+    return imageWidthPopover;
+  }
+
+  const popover = document.createElement('div');
+  popover.className = 'image-width-popover';
+  popover.hidden = true;
+
+  const label = document.createElement('span');
+  label.className = 'image-width-popover__label';
+  label.textContent = '图宽';
+  const controls = document.createElement('div');
+  controls.className = 'image-width-popover__controls';
+  controls.appendChild(label);
+
+  const field = document.createElement('label');
+  field.className = 'image-width-popover__field';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'image-width-popover__input';
+  input.inputMode = 'numeric';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  input.setAttribute('aria-label', '设置图片宽度，单位像素');
+  field.appendChild(input);
+
+  const unit = document.createElement('span');
+  unit.className = 'image-width-popover__unit';
+  unit.textContent = 'px';
+  field.appendChild(unit);
+  controls.appendChild(field);
+
+  const applyValue = () => {
+    if (!activeImageTarget) return;
+    const key = getImageWidthKey(activeImageTarget);
+    const rawValue = input.value.trim();
+    let nextValue = 'auto';
+    let hintMessage = '回车或点应用后生效';
+    let hintTone = '';
+
+    if (rawValue) {
+      const numeric = Number(rawValue);
+      if (!Number.isFinite(numeric)) {
+        setImageWidthHint('请输入数字后再应用', 'warning');
+        return;
+      }
+
+      const normalized = normalizeImageWidthValue(rawValue);
+      nextValue = normalized;
+
+      if (Number(normalized) !== Math.round(numeric)) {
+        if (Number(numeric) < 40) {
+          hintMessage = '最小宽度是 40px，已调整为 40px';
+          hintTone = 'warning';
+        } else if (Number(numeric) > 2400) {
+          hintMessage = '最大宽度是 2400px，已调整为 2400px';
+          hintTone = 'warning';
+        }
+      } else {
+        hintMessage = '宽度已更新';
+      }
+    } else {
+      hintMessage = '已恢复原始宽度';
+    }
+
+    if (nextValue === 'auto') {
+      delete imageWidthState[key];
+    } else {
+      imageWidthState[key] = nextValue;
+    }
+
+    applyImageWidthStyle(activeImageTarget, nextValue);
+    updateImageWidthPopoverState();
+    syncImageWidthStateToParent();
+    if (imageWidthInput) {
+      imageWidthInput.value = nextValue === 'auto' ? '' : nextValue;
+    }
+    setImageWidthHint(hintMessage, hintTone);
+  };
+
+  input.addEventListener('input', () => {
+    setImageWidthHint('回车或点应用后生效');
+  });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyValue();
+    }
+  });
+  input.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+  input.addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+  });
+
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'image-width-popover__reset';
+  reset.textContent = '原始';
+  reset.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    input.value = '';
+    applyValue();
+  });
+  controls.appendChild(reset);
+
+  const applyButton = document.createElement('button');
+  applyButton.type = 'button';
+  applyButton.className = 'image-width-popover__apply';
+  applyButton.textContent = '应用';
+  applyButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    applyValue();
+  });
+  controls.appendChild(applyButton);
+  popover.appendChild(controls);
+
+  const hint = document.createElement('div');
+  hint.className = 'image-width-popover__hint';
+  hint.textContent = '回车或点应用后生效';
+  popover.appendChild(hint);
+
+  popover.addEventListener('pointerenter', clearImageWidthHideTimer);
+  popover.addEventListener('pointerleave', scheduleImageWidthPopoverHide);
+  popover.addEventListener('focusin', clearImageWidthHideTimer);
+  popover.addEventListener('focusout', () => {
+    window.setTimeout(() => {
+      if (
+        imageWidthPopover &&
+        !imageWidthPopover.contains(document.activeElement)
+      ) {
+        scheduleImageWidthPopoverHide();
+      }
+    }, 0);
+  });
+
+  document.body.appendChild(popover);
+  imageWidthPopover = popover;
+  imageWidthInput = input;
+  imageWidthHint = hint;
+  return popover;
+}
+
+function applySavedImageWidths() {
+  getPreviewImages().forEach((image) => {
+    const key = getImageWidthKey(image);
+    const width = imageWidthState[key] || 'auto';
+    applyImageWidthStyle(image, width);
+  });
+}
+
+function setupImageWidthControls() {
+  if (!contentArea) return;
+
+  ensureImageWidthPopover();
+  applySavedImageWidths();
+
+  if (imageWidthUiInitialized) {
+    return;
+  }
+
+  imageWidthUiInitialized = true;
+
+  contentArea.addEventListener('pointerover', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('img')
+      : null;
+    if (!(target instanceof HTMLImageElement) || !contentArea.contains(target)) {
+      return;
+    }
+    showImageWidthPopover(target);
+  });
+
+  contentArea.addEventListener('pointerout', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('img')
+      : null;
+    if (!(target instanceof HTMLImageElement) || target !== activeImageTarget) {
+      return;
+    }
+
+    const related = event.relatedTarget;
+    if (
+      related instanceof Node &&
+      imageWidthPopover &&
+      imageWidthPopover.contains(related)
+    ) {
+      return;
+    }
+
+    scheduleImageWidthPopoverHide();
+  });
+
+  contentArea.addEventListener('click', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('img')
+      : null;
+    if (!(target instanceof HTMLImageElement) || !contentArea.contains(target)) {
+      return;
+    }
+    showImageWidthPopover(target);
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (
+      imageWidthPopover &&
+      event.target instanceof Node &&
+      !imageWidthPopover.contains(event.target) &&
+      !(activeImageTarget && activeImageTarget.contains(event.target))
+    ) {
+      hideImageWidthPopover();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (activeImageTarget) {
+      positionImageWidthPopover(activeImageTarget);
+    }
+  });
+}
+
+function wrapTablesWithCopyButton() {
+  if (!contentArea) return;
+  const tables = contentArea.querySelectorAll('table');
+
+  tables.forEach((table) => {
+    if (table.closest('.table-with-copy')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'table-with-copy';
+
+    const copyTableButton = document.createElement('button');
+    copyTableButton.className = 'table-copy-btn';
+    copyTableButton.type = 'button';
+    copyTableButton.setAttribute('aria-label', UI_TEXT.COPY_TABLE);
+    setButtonContent(copyTableButton, 'table', UI_TEXT.COPY_TABLE);
+
+    copyTableButton.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const tableHtml = table.outerHTML;
+      const tableText = table.innerText;
+      let copied = false;
+
+      try {
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': new Blob([tableHtml], { type: 'text/html' }),
+              'text/plain': new Blob([tableText], { type: 'text/plain' }),
+            }),
+          ]);
+          copied = true;
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(tableText);
+          copied = true;
+        }
+      } catch (err) {
+        copied = false;
+      }
+
+      if (!copied) {
+        showErrorToast(UI_TEXT.COPY_FAILED);
+        return;
+      }
+
+      setButtonContent(copyTableButton, 'check', UI_TEXT.COPIED);
+      copyTableButton.disabled = true;
+      setTimeout(() => {
+        setButtonContent(copyTableButton, 'table', UI_TEXT.COPY_TABLE);
+        copyTableButton.disabled = false;
+      }, 1200);
+    });
+
+    table.parentNode?.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+    wrapper.appendChild(copyTableButton);
+  });
+}
+
+function wrapCodeBlocksWithCopyButton() {
+  if (!contentArea) return;
+  const blocks = contentArea.querySelectorAll('pre');
+
+  blocks.forEach((block) => {
+    if (block.closest('.code-block-with-copy')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block-with-copy';
+
+    const copyCodeButton = document.createElement('button');
+    copyCodeButton.className = 'code-copy-btn';
+    copyCodeButton.type = 'button';
+    copyCodeButton.setAttribute('aria-label', UI_TEXT.COPY_CODE);
+    setButtonContent(copyCodeButton, 'code', UI_TEXT.COPY_CODE);
+
+    copyCodeButton.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const codeText = block.innerText;
+      let copied = false;
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(codeText);
+          copied = true;
+        }
+      } catch (err) {
+        copied = false;
+      }
+
+      if (!copied) {
+        showErrorToast(UI_TEXT.COPY_FAILED);
+        return;
+      }
+
+      setButtonContent(copyCodeButton, 'check', UI_TEXT.COPIED);
+      copyCodeButton.disabled = true;
+      setTimeout(() => {
+        setButtonContent(copyCodeButton, 'code', UI_TEXT.COPY_CODE);
+        copyCodeButton.disabled = false;
+      }, 1200);
+    });
+
+    block.parentNode?.insertBefore(wrapper, block);
+    wrapper.appendChild(block);
+    wrapper.appendChild(copyCodeButton);
+  });
+}
+
+function createColorSwatchButton(colorCode) {
+  const button = document.createElement('button');
+  button.className = 'color-swatch-btn';
+  button.type = 'button';
+  button.setAttribute('title', UI_TEXT.COPY_COLOR_VALUE_PREFIX + colorCode);
+  button.setAttribute('aria-label', UI_TEXT.COPY_COLOR_VALUE_PREFIX + colorCode);
+
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('class', 'swatch');
+  svg.setAttribute('width', '10');
+  svg.setAttribute('height', '10');
+  svg.setAttribute('viewBox', '0 0 10 10');
+
+  const rect = document.createElementNS(svgNs, 'rect');
+  rect.setAttribute('width', '10');
+  rect.setAttribute('height', '10');
+  rect.setAttribute('fill', colorCode);
+  rect.setAttribute('stroke', '#e0e0e6');
+  rect.setAttribute('stroke-width', '1');
+  rect.setAttribute('rx', '2');
+
+  svg.appendChild(rect);
+  button.appendChild(svg);
+
+  button.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(colorCode);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = colorCode;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+    } catch (err) {
+      showErrorToast(UI_TEXT.COPY_FAILED);
+    }
+  });
+
+  return button;
+}
+
+function enhanceColorCodes() {
+  if (!contentArea) return;
+
+  const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let node = walker.nextNode();
+
+  while (node) {
+    const parentElement = node.parentElement;
+    if (
+      parentElement &&
+      !parentElement.closest('.color-code-inline') &&
+      /#[0-9a-fA-F]{6}\\b/.test(node.textContent || '')
+    ) {
+      textNodes.push(node);
+    }
+    node = walker.nextNode();
+  }
+
+  const colorPattern = /#[0-9a-fA-F]{6}\\b/g;
+
+  textNodes.forEach((textNode) => {
+    const text = textNode.textContent || '';
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match;
+
+    while ((match = colorPattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      }
+
+      const colorCode = match[0];
+      const wrapper = document.createElement('span');
+      wrapper.className = 'color-code-inline';
+
+      wrapper.appendChild(createColorSwatchButton(colorCode));
+      wrapper.appendChild(document.createTextNode(colorCode));
+      fragment.appendChild(wrapper);
+
+      lastIndex = match.index + colorCode.length;
+    }
+
+    if (lastIndex < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+
+    textNode.parentNode?.replaceChild(fragment, textNode);
+  });
+}
+
+function buildClipboardPayload(container) {
+  const clone = container.cloneNode(true);
+  const liveInputs = container.querySelectorAll('input[type="checkbox"]');
+  const cloneInputs = clone.querySelectorAll('input[type="checkbox"]');
+  liveInputs.forEach((input, index) => {
+    const cloneInput = cloneInputs[index];
+    if (!cloneInput) return;
+    if (input.checked) {
+      cloneInput.setAttribute('checked', '');
+    } else {
+      cloneInput.removeAttribute('checked');
+    }
+  });
+  clone.querySelectorAll('.table-copy-btn, .code-copy-btn, .color-swatch-btn').forEach((el) => el.remove());
+
+  return {
+    html: clone.innerHTML,
+    text: clone.innerText,
+  };
+}
+
+async function copyPreviewContent() {
+  if (!copyBtn || !contentArea) return false;
+  setCopyButtonState(UI_TEXT.COPYING, true);
+
+  const selection = window.getSelection();
+  if (!selection) {
+    showErrorToast(UI_TEXT.COPY_FAILED);
+    setCopyButtonState(UI_TEXT.COPY, false);
+    return false;
+  }
+
+  const previousRanges = [];
+  for (let i = 0; i < selection.rangeCount; i += 1) {
+    previousRanges.push(selection.getRangeAt(i));
+  }
+
+  const checkboxStates = syncCheckboxAttributes(contentArea);
+  const { html, text } = buildClipboardPayload(contentArea);
+  const copyUsingSelection = () => {
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(contentArea);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return document.execCommand('copy');
+    } catch (err) {
+      return false;
+    }
+  };
+
+  let success = false;
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+        }),
+      ]);
+      success = true;
+    } else {
+      success = copyUsingSelection();
+    }
+  } catch (err) {
+    success = copyUsingSelection();
+  } finally {
+    restoreSelection(selection, previousRanges);
+    restoreCheckboxAttributes(checkboxStates);
+  }
+
+  if (!success) {
+    showErrorToast(UI_TEXT.COPY_FAILED);
+    setCopyButtonState(UI_TEXT.COPY, false);
+    return false;
+  }
+
+  setCopyButtonState(UI_TEXT.COPIED, true);
+  setTimeout(() => {
+    setCopyButtonState(UI_TEXT.COPY, false);
+  }, 1500);
+  return true;
+}
+
+// 分页 PDF：改用浏览器原生打印，避免 html2canvas 位图切页导致切字
+pagedBtn.addEventListener('click', () => {
+  try {
+    runPrintJob({
+      title: PAGED_FILENAME_TITLE,
+      loadingLabel: UI_TEXT.PAGED_LOADING,
+      styleText: [
+        '@page { size: ' + A4_WIDTH_MM + 'mm ' + A4_HEIGHT_MM + 'mm; margin: '
+          + PAGED_MARGINS[0] + 'mm ' + PAGED_MARGINS[1] + 'mm '
+          + PAGED_MARGINS[2] + 'mm ' + PAGED_MARGINS[3] + 'mm; }',
+        '@media print {',
+        '  h1, h2, h3, h4, h5, h6,',
+        '  img, table, pre, figure, blockquote,',
+        '  ul, ol, dl {',
+        '    break-inside: avoid-page !important;',
+        '    page-break-inside: avoid !important;',
+        '  }',
+        '  h1, h2 {',
+        '    break-after: avoid-page !important;',
+        '    page-break-after: avoid !important;',
+        '  }',
+        '  h1, h2, h3, h4, h5, h6 {',
+        '    break-before: auto !important;',
+        '    page-break-before: auto !important;',
+        '  }',
+        '}',
+      ].join(''),
+    });
+  } catch (err) {
+    console.error('Paged print preparation failed:', err);
+    showErrorToast(UI_TEXT.PRINT_PREPARATION_FAILED_PREFIX + (err.message || err));
+    enableButtons();
+  }
+});
+
+// 单页 PDF（window.print 真实文字 PDF）
+singleBtn.addEventListener('click', () => {
+  try {
+    const PX_TO_MM = 0.264583;
+    const marginMm = 15;
+    const printableWidthPx = Math.floor((A4_WIDTH_MM - marginMm * 2) / PX_TO_MM);
+
+    // 创建隐藏克隆以在打印宽度下测量内容高度
+    const clone = contentArea.cloneNode(true);
+    clone.style.position = 'absolute';
+    clone.style.left = '-99999px';
+    clone.style.top = '0';
+    clone.style.width = printableWidthPx + 'px';
+    clone.style.maxWidth = printableWidthPx + 'px';
+    clone.style.padding = '0';
+    clone.style.margin = '0';
+    clone.style.boxShadow = 'none';
+    clone.style.borderRadius = '0';
+    clone.style.visibility = 'hidden';
+    document.body.appendChild(clone);
+
+    const contentHeightPx = clone.scrollHeight;
+    document.body.removeChild(clone);
+
+    const contentHeightMm = contentHeightPx * PX_TO_MM;
+    const pageHeightMm = Math.max(
+      A4_HEIGHT_MM,
+      Math.ceil(contentHeightMm) + (marginMm * 2) + 10
+    );
+
+    runPrintJob({
+      title: SINGLE_PAGE_FILENAME_TITLE,
+      loadingLabel: UI_TEXT.SINGLE_PREPARING,
+      styleText:
+        '@page { size: ' + A4_WIDTH_MM + 'mm ' + pageHeightMm + 'mm; margin: ' + marginMm + 'mm; }' +
+        '@media print {' +
+        '  h1, h2, h3, h4, h5, h6,' +
+        '  img, table, pre, figure, blockquote,' +
+        '  ul, ol, dl {' +
+        '    break-inside: auto !important;' +
+        '    page-break-inside: auto !important;' +
+        '  }' +
+        '  h1, h2 {' +
+        '    break-after: auto !important;' +
+        '    page-break-after: auto !important;' +
+        '  }' +
+        '  h1, h2, h3, h4, h5, h6 {' +
+        '    break-before: auto !important;' +
+        '    page-break-before: auto !important;' +
+        '  }' +
+        '}',
+    });
+  } catch (err) {
+    console.error('Print preparation failed:', err);
+    showErrorToast(UI_TEXT.PRINT_PREPARATION_FAILED_PREFIX + (err.message || err));
+    enableButtons();
+  }
+});
+
+if (copyBtn) {
+  copyBtn.addEventListener('click', copyPreviewContent);
+}
+
+wrapTablesWithCopyButton();
+wrapCodeBlocksWithCopyButton();
+enhanceColorCodes();
+setupImageWidthControls();
+
+// Checkbox 双向绑定：通知父窗口
+function setupCheckboxSync() {
+  if (!contentArea) return;
+  contentArea.addEventListener('change', function(event) {
+    const target = event.target;
+    if (!target || target.tagName !== 'INPUT' || target.type !== 'checkbox') return;
+    // 找到该 checkbox 是第几个
+    const allCheckboxes = contentArea.querySelectorAll('input[type="checkbox"]');
+    const index = Array.from(allCheckboxes).indexOf(target);
+    if (index < 0) return;
+    window.parent.postMessage({
+      type: 'checkbox-toggle',
+      index: index,
+      checked: target.checked,
+    }, '*');
+  });
+}
+
+setupCheckboxSync();
+
+// Expose for incremental updates from parent
+window.wrapTablesWithCopyButton = wrapTablesWithCopyButton;
+window.wrapCodeBlocksWithCopyButton = wrapCodeBlocksWithCopyButton;
+window.enhanceColorCodes = enhanceColorCodes;
+window.copyPreviewContent = copyPreviewContent;
+window.setupCheckboxSync = setupCheckboxSync;
+window.setupImageWidthControls = setupImageWidthControls;
+window.applySavedImageWidths = applySavedImageWidths;
+window.getImageWidthState = function() {
+  return { ...imageWidthState };
+};
+window.setImageWidthState = function(nextState) {
+  imageWidthState =
+    nextState && typeof nextState === 'object' ? { ...nextState } : {};
+  applySavedImageWidths();
+};
+
+// 预加载库
+ensureLibs().catch(() => {});
+
+// =============================================================================
+// 长图导出
+// =============================================================================
+const longImageBtn = document.getElementById('export-long-image-btn');
+
+const LONG_IMAGE_WIDTH = ${LONG_IMAGE.WIDTH_PX};
+const LONG_IMAGE_SCALE = ${LONG_IMAGE.SCALE};
+const LONG_IMAGE_PADDING = ${LONG_IMAGE.PADDING};
+const LONG_IMAGE_HEADER_PADDING = ${LONG_IMAGE.HEADER_PADDING};
+const LONG_IMAGE_FOOTER_PADDING = ${LONG_IMAGE.FOOTER_PADDING};
+const LONG_IMAGE_WATERMARK = '${LONG_IMAGE.WATERMARK_TEXT}';
+const LONG_IMAGE_FILENAME_PREFIX = '${LONG_IMAGE.FILENAME_PREFIX}';
+
+const LONG_IMAGE_UI = {
+  DEFAULT: UI_TEXT.LONG_IMAGE_DEFAULT,
+  RENDERING: UI_TEXT.LONG_IMAGE_RENDERING,
+  GENERATING: UI_TEXT.LONG_IMAGE_GENERATING,
+};
+
+function disableAllButtons(loadingBtn, loadingText) {
+  pagedBtn.disabled = true;
+  singleBtn.disabled = true;
+  if (copyBtn) copyBtn.disabled = true;
+  if (longImageBtn) longImageBtn.disabled = true;
+  if (loadingBtn === longImageBtn) {
+    setButtonContent(loadingBtn, 'image', loadingText);
+  }
+}
+
+function enableAllButtons() {
+  pagedBtn.disabled = false;
+  singleBtn.disabled = false;
+  if (copyBtn) copyBtn.disabled = false;
+  if (longImageBtn) {
+    longImageBtn.disabled = false;
+    setButtonContent(longImageBtn, 'image', LONG_IMAGE_UI.DEFAULT);
+  }
+  setButtonContent(pagedBtn, 'pagedPdf', UI_TEXT.PAGED);
+  setButtonContent(singleBtn, 'singlePage', UI_TEXT.SINGLE);
+}
+
+function generateTimestamp() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate())
+    + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+}
+
+function formatDate() {
+  const now = new Date();
+  return now.getFullYear() + '-'
+    + String(now.getMonth() + 1).padStart(2, '0') + '-'
+    + String(now.getDate()).padStart(2, '0');
+}
+
+if (longImageBtn) {
+  longImageBtn.addEventListener('click', async () => {
+    disableAllButtons(longImageBtn, LONG_IMAGE_UI.RENDERING);
+
+    try {
+      await ensureLibs();
+
+      // 提取标题：优先取第一个 h1，否则 h2，否则用默认
+      const h1 = contentArea.querySelector('h1');
+      const h2 = contentArea.querySelector('h2');
+      const title = (h1 && h1.textContent.trim()) || (h2 && h2.textContent.trim()) || UI_TEXT.PREVIEW_FALLBACK_TITLE;
+
+      // 创建离屏容器
+      const offscreen = document.createElement('div');
+      offscreen.style.cssText = 'position:absolute;left:-9999px;top:0;z-index:-1;';
+      document.body.appendChild(offscreen);
+
+      // 内层容器（控制宽度）
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = [
+        'width:' + LONG_IMAGE_WIDTH + 'px',
+        'background:#ffffff',
+        'font-family:' + ${JSON.stringify(STYLES.FONTS.PREVIEW)},
+        'color:#333',
+        'overflow:hidden',
+      ].join(';');
+      offscreen.appendChild(wrapper);
+
+      // 头部区域
+      const header = document.createElement('div');
+      header.style.cssText = [
+        'padding:' + LONG_IMAGE_HEADER_PADDING + 'px ' + LONG_IMAGE_PADDING + 'px',
+        'border-bottom:1px solid #e8e8e8',
+      ].join(';');
+      header.innerHTML = '<div style="font-size:20px;font-weight:700;color:#2c3e50;margin-bottom:6px;line-height:1.4;word-break:break-word;">'
+        + title.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        + '</div>'
+        + '<div style="font-size:12px;color:#999;">' + formatDate() + '</div>';
+      wrapper.appendChild(header);
+
+      // 正文区域 — 克隆预览内容（排除额外 UI 元素）
+      const body = document.createElement('div');
+      body.className = 'markdown-body';
+      body.style.cssText = [
+        'padding:' + LONG_IMAGE_PADDING + 'px',
+        'background:#ffffff',
+        'box-shadow:none',
+        'border-radius:0',
+        'width:100%',
+        'box-sizing:border-box',
+      ].join(';');
+      body.innerHTML = contentArea.innerHTML;
+      // 移除克隆中的 UI 按钮（如复制按钮、颜色按钮）
+      body.querySelectorAll('.table-copy-btn, .code-copy-btn, .color-swatch-btn').forEach(el => el.remove());
+      wrapper.appendChild(body);
+
+      // 底部水印
+      const footer = document.createElement('div');
+      footer.style.cssText = [
+        'padding:' + LONG_IMAGE_FOOTER_PADDING + 'px ' + LONG_IMAGE_PADDING + 'px',
+        'text-align:center',
+        'font-size:11px',
+        'color:#bbb',
+        'border-top:1px solid #e8e8e8',
+      ].join(';');
+      footer.textContent = LONG_IMAGE_WATERMARK;
+      wrapper.appendChild(footer);
+
+      // 等待图片加载
+      const imgs = wrapper.querySelectorAll('img');
+      if (imgs.length > 0) {
+        await Promise.allSettled(
+          Array.from(imgs).map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => {
+              img.onload = resolve;
+              img.onerror = resolve;
+            });
+          })
+        );
+      }
+
+      setButtonContent(longImageBtn, 'image', LONG_IMAGE_UI.GENERATING);
+
+      // html2canvas 截图
+      const canvas = await html2canvas(wrapper, {
+        scale: LONG_IMAGE_SCALE,
+        useCORS: true,
+        logging: false,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        width: LONG_IMAGE_WIDTH,
+        windowWidth: LONG_IMAGE_WIDTH,
+      });
+
+      // 清理离屏容器
+      document.body.removeChild(offscreen);
+
+      // 导出 PNG 并下载
+      canvas.toBlob(function(blob) {
+        if (!blob) {
+          showErrorToast(UI_TEXT.IMAGE_GENERATION_FAILED);
+          enableAllButtons();
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = LONG_IMAGE_FILENAME_PREFIX + '-' + generateTimestamp() + '.png';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 100);
+        enableAllButtons();
+      }, 'image/png');
+
+    } catch (err) {
+      console.error('Long image export failed:', err);
+      showErrorToast(UI_TEXT.LONG_IMAGE_EXPORT_FAILED_PREFIX + (err.message || err));
+      enableAllButtons();
+    }
+  });
+}
+`;
+
+// =============================================================================
+// 模板生成函数
+// =============================================================================
+
+/**
+ * 生成预览页面 HTML
+ * @param htmlContent 渲染后的 HTML 内容
+ * @param embedded 是否嵌入 iframe（隐藏控件，减少 padding）
+ * @returns 完整的预览页面 HTML
+ */
+export function generatePreviewHtml(
+  htmlContent: string,
+  embedded = false,
+  imageWidthState: Record<string, string> = {}
+): string {
+  const bodyClass = embedded ? ' class="embedded"' : '';
+  const scriptWithState = previewScript.replace(
+    '__IMAGE_WIDTH_STATE__',
+    JSON.stringify(imageWidthState)
+  );
+  return `<!DOCTYPE html>
+<html lang="${APP_LOCALE}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${UI_TEXT.APP.PREVIEW_TITLE}</title>
+  <link rel="stylesheet" href="${VENDOR_RESOURCES.GITHUB_MARKDOWN_CSS}">
+  <style>${previewStyles}</style>
+</head>
+<body${bodyClass}>
+  <div class="preview-controls">
+    <button id="download-pdf-btn" class="pdf-btn" type="button">${renderButtonContent('pagedPdf', UI_TEXT.PDF_BUTTONS.PAGED)}</button>
+    <button id="download-single-page-pdf-btn" class="pdf-btn" type="button">${renderButtonContent('singlePage', UI_TEXT.PDF_BUTTONS.SINGLE)}</button>
+    <button id="copy-preview-btn" class="pdf-btn" type="button">${renderButtonContent('copy', UI_TEXT.COPY_BUTTONS.COPY)}</button>
+    <button id="export-long-image-btn" class="pdf-btn" type="button">${renderButtonContent('image', UI_TEXT.LONG_IMAGE_BUTTONS.DEFAULT)}</button>
+  </div>
+  <div class="container">
+    <article class="markdown-body" id="preview-content-area">
+      ${htmlContent}
+    </article>
+  </div>
+  <script>${scriptWithState}</script>
+</body>
+</html>`;
+}
